@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Emergency Response System & Panic Button</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fef2f2',
+                            100: '#ffe1e1',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            900: '#7f1d1d',
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .alarm-gradient {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.95) 100%);
+        }
+        .glow-red {
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col selection:bg-red-500 selection:text-white">
+
+    <!-- HALAMAN LOGIN (Tampil jika belum auth) -->
+    <div id="loginPage" class="fixed inset-0 z-50 bg-gray-950 flex items-center justify-center p-4">
+        <div class="bg-gray-900 border border-gray-800 w-full max-w-md rounded-2xl p-8 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-red-600/20 text-red-500 rounded-2xl mx-auto flex items-center justify-center border border-red-500/30">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl animate-pulse"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white tracking-wide">AUTHENTICATION</h2>
+                <p class="text-xs text-gray-400">IoT Emergency Response Dashboard System</p>
+            </div>
+
+            <form onsubmit="handleAuthLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="loginUsername" value="admin" required class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="loginPassword" value="admin123" required class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-500">
+                    </div>
+                </div>
+
+                <div id="loginErrorMsg" class="hidden text-xs text-red-400 bg-red-950/50 p-2.5 rounded-lg border border-red-800 text-center"></div>
+
+                <button type="submit" id="loginSubmitBtn" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>MASUK SYSTEM</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="mainApp" class="hidden flex-1 flex flex-col">
+        <!-- TOP NAVIGATION HEADER -->
+        <header class="bg-gray-800/90 backdrop-blur-md border-b border-gray-700 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Brand & Logo -->
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-red-600 text-white rounded-xl shadow-lg flex items-center justify-center">
+                            <i class="fa-solid fa-triangle-exclamation text-xl animate-pulse"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-lg leading-tight tracking-wide text-white">EMERGENCY <span class="text-red-500">RESPONSE</span></h1>
+                            <p class="text-xs text-gray-400 font-medium">IoT Panic Button Dashboard</p>
+                        </div>
+                    </div>
+
+                    <!-- Visualisasi Jam Digital & Tanggal Sekarang -->
+                    <div class="hidden lg:flex items-center space-x-3 bg-gray-900/80 px-4 py-1.5 rounded-xl border border-gray-700/60">
+                        <i class="fa-regular fa-clock text-red-400 text-lg"></i>
+                        <div class="text-left">
+                            <div id="liveDigitalClock" class="font-mono text-sm font-bold text-emerald-400 leading-none">00:00:00 WITA</div>
+                            <div id="liveDateDisplay" class="text-[10px] text-gray-400 font-medium mt-0.5">Selasa, 6 Oktober 2026</div>
+                        </div>
+                    </div>
+
+                    <!-- Connection Status & System Controls -->
+                    <div class="flex items-center space-x-3">
+                        <div id="connectionBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="connectionText">SYSTEM ONLINE</span>
+                        </div>
+
+                        <!-- Mute Audio -->
+                        <button id="audioToggleBtn" onclick="toggleMuteAudio()" class="p-2.5 text-gray-400 hover:text-white bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-all border border-gray-600/50" title="Toggle Sound Alarm">
+                            <i id="audioIcon" class="fa-solid fa-volume-high text-emerald-400"></i>
+                        </button>
+
+                        <!-- Setup GAS -->
+                        <button onclick="openSetupModal()" class="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow-md transition-all">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span class="hidden sm:inline">Setup GAS</span>
+                        </button>
+
+                        <!-- LOGOUT BUTTON -->
+                        <button onclick="handleAuthLogout()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-red-950/60 hover:bg-red-800 text-red-300 border border-red-700/50 text-xs font-semibold rounded-lg transition-all">
+                            <i class="fa-solid fa-power-off"></i>
+                            <span class="hidden sm:inline">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <!-- ALARM BANNER -->
+            <div id="mainAlarmBanner" class="hidden relative overflow-hidden rounded-2xl alarm-gradient p-6 text-white shadow-2xl glow-red border-2 border-red-500 animate-pulse-fast">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-4 bg-white/20 rounded-full flex-shrink-0 animate-bounce">
+                            <i class="fa-solid fa-lightbulb text-4xl text-yellow-300"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-black/40 text-yellow-300 font-bold px-2.5 py-0.5 rounded text-xs tracking-wider uppercase">PERINGATAN DARURAT</span>
+                                <span id="bannerTime" class="text-xs text-red-100 font-mono">10:26 WITA</span>
+                            </div>
+                            <h2 id="bannerLocation" class="text-2xl sm:text-3xl font-extrabold mt-1">PANIC BUTTON DIPETIK!</h2>
+                            <p id="bannerDeviceInfo" class="text-sm text-red-100 mt-0.5">Device ID: <span class="font-mono">ESP32-DEV-001</span></p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        <button onclick="acknowledgeAlarm()" class="flex-1 md:flex-none px-5 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-hand"></i>
+                            <span>ACKNOWLEDGE</span>
+                        </button>
+                        <button onclick="resolveAlarm()" class="flex-1 md:flex-none px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>RESOLVE & RESET</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NAVIGATION TABS -->
+            <div class="flex items-center justify-between border-b border-gray-800 pb-2 overflow-x-auto">
+                <div class="flex space-x-2">
+                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-xl font-semibold text-sm transition-all flex items-center space-x-2 bg-gray-800 text-red-400 border border-gray-700">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span>Live Dashboard</span>
+                    </button>
+                    <button onclick="switchTab('history')" id="tab-history" class="tab-btn px-4 py-2 rounded-xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-400 hover:bg-gray-800 hover:text-gray-200">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Riwayat Kejadian</span>
+                    </button>
+                    <button onclick="switchTab('expired')" id="tab-expired" class="tab-btn px-4 py-2 rounded-xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-400 hover:bg-gray-800 hover:text-gray-200">
+                        <i class="fa-solid fa-folder-minus text-amber-400"></i>
+                        <span>Log Kadaluarsa</span>
+                    </button>
+                    <button onclick="switchTab('devices')" id="tab-devices" class="tab-btn px-4 py-2 rounded-xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-400 hover:bg-gray-800 hover:text-gray-200">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Perangkat & Firmware</span>
+                    </button>
+                </div>
+
+                <button onclick="simulateEmergencyTrigger()" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-red-900/40 hover:bg-red-900/80 text-red-300 border border-red-700/50 rounded-lg text-xs font-semibold transition-all">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Simulasi Panic Button</span>
+                </button>
+            </div>
+
+            <!-- TAB 1: LIVE DASHBOARD -->
+            <section id="content-dashboard" class="space-y-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/60 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 font-medium">Total Perangkat</p>
+                            <p id="statTotalDevices" class="text-2xl font-bold text-gray-100 mt-1">4</p>
+                        </div>
+                        <div class="p-3 bg-blue-500/10 text-blue-400 rounded-lg">
+                            <i class="fa-solid fa-network-wired text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/60 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 font-medium">Status Darurat</p>
+                            <p id="statActiveAlarms" class="text-2xl font-bold text-emerald-400 mt-1">0 Active</p>
+                        </div>
+                        <div class="p-3 bg-red-500/10 text-red-400 rounded-lg">
+                            <i class="fa-solid fa-bell text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/60 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 font-medium">Perangkat Safe</p>
+                            <p id="statSafeDevices" class="text-2xl font-bold text-emerald-400 mt-1">3</p>
+                        </div>
+                        <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                            <i class="fa-solid fa-shield-halved text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/60 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-400 font-medium">Perangkat Offline</p>
+                            <p id="statOfflineDevices" class="text-2xl font-bold text-gray-400 mt-1">1</p>
+                        </div>
+                        <div class="p-3 bg-gray-500/10 text-gray-400 rounded-lg">
+                            <i class="fa-solid fa-plug-circle-xmark text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-bold text-gray-200 flex items-center space-x-2">
+                            <i class="fa-solid fa-grip text-red-500"></i>
+                            <span>Peta Ruangan & Zona Perangkat</span>
+                        </h3>
+                    </div>
+                    <div id="zoneGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+                </div>
+            </section>
+
+            <!-- TAB 2: INCIDENT HISTORY LOGS -->
+            <section id="content-history" class="hidden space-y-4">
+                <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/60 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Filter Status</label>
+                            <select id="logStatusFilter" onchange="applyLogFilters()" class="bg-gray-900 text-xs border border-gray-700 rounded-lg px-3 py-2 text-gray-200 focus:outline-none">
+                                <option value="ALL">Semua Status</option>
+                                <option value="TRIGGERED">TRIGGERED</option>
+                                <option value="ACKNOWLEDGED">ACKNOWLEDGED</option>
+                                <option value="RESOLVED">RESOLVED</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                        <button onclick="exportLogsToCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-2 shadow-md">
+                            <i class="fa-solid fa-file-csv"></i>
+                            <span>Ekspor ke CSV</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800/40 rounded-xl border border-gray-700/60 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-gray-800 text-gray-300 font-semibold border-b border-gray-700">
+                                <tr>
+                                    <th class="p-3.5">Waktu Kejadian</th>
+                                    <th class="p-3.5">Device ID</th>
+                                    <th class="p-3.5">Lokasi Zona</th>
+                                    <th class="p-3.5">Status Peringatan</th>
+                                    <th class="p-3.5">Operator Handling</th>
+                                    <th class="p-3.5 text-right">Aksi Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody" class="divide-y divide-gray-800 text-gray-300"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: EXPIRED LOGS MENU -->
+            <section id="content-expired" class="hidden space-y-4">
+                <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-amber-400 flex items-center space-x-2">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>Menu Log Kadaluarsa (&gt; 30 Hari)</span>
+                        </h3>
+                        <p class="text-xs text-gray-400">Arsip data insiden lama yang sudah melewati batas waktu retensi.</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-gray-400">Batas Kadaluarsa:</span>
+                        <select id="expiredDaysSelect" onchange="fetchExpiredLogs()" class="bg-gray-900 border border-gray-700 text-xs rounded-lg px-3 py-1.5 text-white">
+                            <option value="30">30 Hari</option>
+                            <option value="60">60 Hari</option>
+                            <option value="90">90 Hari</option>
+                        </select>
+                        <button onclick="fetchExpiredLogs()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold">Refresh</button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800/40 rounded-xl border border-gray-700/60 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-gray-800 text-gray-300 font-semibold border-b border-gray-700">
+                                <tr>
+                                    <th class="p-3.5">ID Insiden</th>
+                                    <th class="p-3.5">Waktu Kejadian</th>
+                                    <th class="p-3.5">Device ID</th>
+                                    <th class="p-3.5">Lokasi</th>
+                                    <th class="p-3.5">Usia Log (Hari)</th>
+                                    <th class="p-3.5">Status Akhir</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expiredLogsTableBody" class="divide-y divide-gray-800 text-gray-300">
+                                <tr><td colspan="6" class="p-4 text-center text-gray-500">Memuat log kadaluarsa...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: DEVICE MANAGEMENT & CODE GENERATOR -->
+            <section id="content-devices" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1 space-y-4">
+                        <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/60 flex items-center justify-between">
+                            <h3 class="font-bold text-sm text-gray-200 flex items-center space-x-2">
+                                <i class="fa-solid fa-microchip text-blue-400"></i>
+                                <span>Daftar Perangkat ESP32</span>
+                            </h3>
+                            <button onclick="openAddDeviceModal()" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg font-semibold">
+                                <i class="fa-solid fa-plus mr-1"></i>Tambah
+                            </button>
+                        </div>
+                        <div id="deviceListContainer" class="space-y-3"></div>
+                    </div>
+
+                    <div class="lg:col-span-2 bg-gray-800/60 p-5 rounded-xl border border-gray-700/60 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-700 pb-3 gap-2">
+                            <div>
+                                <h3 class="font-bold text-sm text-gray-100 flex items-center space-x-2">
+                                    <i class="fa-solid fa-code text-yellow-400"></i>
+                                    <span>Generator Code Arduino C++ (ESP32)</span>
+                                </h3>
+                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino untuk Panic Button hardware</p>
+                            </div>
+                            <button onclick="copyGeneratedCode()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-lg text-xs font-bold transition-all">
+                                <i class="fa-solid fa-copy"></i>
+                                <span>Salin Kode .ino</span>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Wi-Fi SSID</label>
+                                <input type="text" id="genWifiSsid" value="Wi-Fi_Kantor" oninput="generateArduinoCode()" class="w-full bg-gray-900 text-xs border border-gray-700 rounded-lg px-3 py-2 text-gray-200 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Wi-Fi Password</label>
+                                <input type="password" id="genWifiPass" value="SecretPassword123" oninput="generateArduinoCode()" class="w-full bg-gray-900 text-xs border border-gray-700 rounded-lg px-3 py-2 text-gray-200 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Target Device</label>
+                                <select id="genDeviceSelect" onchange="generateArduinoCode()" class="w-full bg-gray-900 text-xs border border-gray-700 rounded-lg px-3 py-2 text-gray-200 focus:outline-none"></select>
+                            </div>
+                        </div>
+
+                        <pre id="arduinoCodeDisplay" class="bg-gray-950 p-4 rounded-xl text-xs text-emerald-400 font-mono overflow-x-auto max-h-[420px] border border-gray-800 leading-relaxed"></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL SETUP GAS -->
+    <div id="setupModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 border border-gray-700 w-full max-w-xl rounded-2xl shadow-2xl p-6 space-y-4">
+            <h3 class="font-bold text-lg text-white">Setup Integrasi Google Apps Script</h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-300 font-semibold mb-1">Web App Deployment URL</label>
+                    <input type="url" id="gasScriptUrl" placeholder="https://script.google.com/macros/s/AKfycbwmh4RqaOOQEHWzT-tF1o57MJAldlU7HvOGZ5TpxDDDIb_sgBuy6c4JBG8WeV-9KmuffA/exec" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-white font-mono">
+                </div>
+                <div>
+                    <label class="block text-gray-300 font-semibold mb-1">API Secret Key</label>
+                    <input type="password" id="gasApiKey" value="EMERGENCY_SECRET_KEY_2026" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-white font-mono">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeSetupModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg text-xs font-semibold">Tutup</button>
+                <button onclick="saveSetupConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ADD DEVICE -->
+    <div id="addDeviceModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 border border-gray-700 w-full max-w-md rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-base text-gray-100">Tambah Perangkat IoT Baru</h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-400 mb-1">Device ID</label>
+                    <input type="text" id="newDeviceId" placeholder="ESP32-DEV-005" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-gray-100">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Nama Lokasi / Ruangan</label>
+                    <input type="text" id="newDeviceLocation" placeholder="Ruang Rapat Utama" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-gray-100">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeAddDeviceModal()" class="px-4 py-2 bg-gray-700 text-gray-200 rounded-lg text-xs font-semibold">Batal</button>
+                <button onclick="saveNewDevice()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold">Simpan Device</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        let devices = [
+            { id: "ESP32-DEV-001", location: "Ruang Lab 01", status: "SAFE", lastSeen: "Baru saja", ip: "192.168.1.101" },
+            { id: "ESP32-DEV-002", location: "Lobi Utama", status: "SAFE", lastSeen: "1 menit lalu", ip: "192.168.1.102" },
+            { id: "ESP32-DEV-003", location: "Gudang B2", status: "SAFE", lastSeen: "3 menit lalu", ip: "192.168.1.103" },
+            { id: "ESP32-DEV-004", location: "Kantin Lt 2", status: "OFFLINE", lastSeen: "2 jam lalu", ip: "192.168.1.104" }
+        ];
+
+        let incidentLogs = [
+            { id: "LOG-1001", timestamp: "2026-10-05 08:30:12", deviceId: "ESP32-DEV-002", location: "Lobi Utama", status: "RESOLVED", operator: "Admin-01" }
+        ];
+
+        let activeAlarm = null;
+        let isMuted = false;
+        let currentUser = null;
+
+        let gasConfig = {
+            url: localStorage.getItem('gas_url') || '',
+            apiKey: localStorage.getItem('gas_key') || 'EMERGENCY_SECRET_KEY_2026'
+        };
+
+        // Web Audio Context
+        let audioCtx = null, sirenOscillator = null, sirenGain = null, sirenInterval = null;
+
+        window.onload = function() {
+            startDigitalClock();
+            checkAuthSession();
+
+            document.getElementById('gasScriptUrl').value = gasConfig.url;
+            document.getElementById('gasApiKey').value = gasConfig.apiKey;
+        };
+
+        // Visualisasi Jam Digital & Tanggal
+        function startDigitalClock() {
+            function updateClock() {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('id-ID') + ' WITA';
+                
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const dateStr = now.toLocaleDateString('id-ID', options);
+
+                const clockEl = document.getElementById('liveDigitalClock');
+                const dateEl = document.getElementById('liveDateDisplay');
+
+                if (clockEl) clockEl.innerText = timeStr;
+                if (dateEl) dateEl.innerText = dateStr;
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        // Authentication Handling
+        function checkAuthSession() {
+            const savedUser = localStorage.getItem('auth_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                initDashboardData();
+            } else {
+                document.getElementById('loginPage').classList.remove('hidden');
+                document.getElementById('mainApp').classList.add('hidden');
+            }
+        }
+
+        function handleAuthLogin(e) {
+            e.preventDefault();
+            const userVal = document.getElementById('loginUsername').value.trim();
+            const passVal = document.getElementById('loginPassword').value.trim();
+            const errEl = document.getElementById('loginErrorMsg');
+
+            if (userVal === "admin" && passVal === "admin123") {
+                currentUser = { username: userVal, role: "Administrator" };
+                localStorage.setItem('auth_user', JSON.stringify(currentUser));
+                checkAuthSession();
+            } else {
+                errEl.classList.remove('hidden');
+                errEl.innerText = "Username atau Password salah!";
+            }
+        }
+
+        function handleAuthLogout() {
+            localStorage.removeItem('auth_user');
+            currentUser = null;
+            checkAuthSession();
+        }
+
+        function initDashboardData() {
+            renderZoneGrid();
+            renderLogsTable();
+            renderDeviceList();
+            populateDeviceDropdown();
+            generateArduinoCode();
+        }
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('section[id^="content-"]').forEach(sec => sec.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-gray-800', 'text-red-400', 'border', 'border-gray-700');
+                btn.classList.add('text-gray-400');
+            });
+
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-gray-800', 'text-red-400', 'border', 'border-gray-700');
+                activeBtn.classList.remove('text-gray-400');
+            }
+
+            if (tabId === 'expired') {
+                fetchExpiredLogs();
+            }
+        }
+
+        // Fetch Expired Logs
+        function fetchExpiredLogs() {
+            const tbody = document.getElementById('expiredLogsTableBody');
+            const days = document.getElementById('expiredDaysSelect').value;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">Mencari log kadaluarsa...</td></tr>`;
+
+            if (!gasConfig.url) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-amber-400">Set URL Google Apps Script di menu Setup GAS terlebih dahulu.</td></tr>`;
+                return;
+            }
+
+            fetch(`${gasConfig.url}?action=getExpiredLogs&days=${days}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.expired_logs.length > 0) {
+                        tbody.innerHTML = data.expired_logs.map(log => `
+                            <tr class="hover:bg-gray-800/50">
+                                <td class="p-3.5 font-mono text-gray-300">${log.incident_id}</td>
+                                <td class="p-3.5 font-mono text-gray-400">${log.timestamp}</td>
+                                <td class="p-3.5 font-mono text-gray-300">${log.device_id}</td>
+                                <td class="p-3.5 font-semibold text-gray-200">${log.location}</td>
+                                <td class="p-3.5"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">${log.age_days} Hari</span></td>
+                                <td class="p-3.5 text-gray-400">${log.status}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Tidak ada log kadaluarsa melebihi ${days} hari.</td></tr>`;
+                    }
+                })
+                .catch(err => {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-400">Gagal mengambil log: ${err.message}</td></tr>`;
+                });
+        }
+
+        // Web Audio Siren
+        function initAudioContext() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function startSirenSound() {
+            if (isMuted) return;
+            initAudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (sirenOscillator) stopSirenSound();
+
+            sirenOscillator = audioCtx.createOscillator();
+            sirenGain = audioCtx.createGain();
+
+            sirenOscillator.type = 'sawtooth';
+            sirenGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+
+            sirenOscillator.connect(sirenGain);
+            sirenGain.connect(audioCtx.destination);
+            sirenOscillator.start();
+
+            let highPitch = false;
+            sirenInterval = setInterval(() => {
+                if (!sirenOscillator || !audioCtx) return;
+                sirenOscillator.frequency.exponentialRampToValueAtTime(highPitch ? 600 : 1200, audioCtx.currentTime + 0.35);
+                highPitch = !highPitch;
+            }, 400);
+        }
+
+        function stopSirenSound() {
+            if (sirenInterval) clearInterval(sirenInterval);
+            if (sirenOscillator) {
+                try { sirenOscillator.stop(); sirenOscillator.disconnect(); } catch(e) {}
+                sirenOscillator = null;
+            }
+        }
+
+        function toggleMuteAudio() {
+            isMuted = !isMuted;
+            const icon = document.getElementById('audioIcon');
+            if (isMuted) {
+                icon.className = 'fa-solid fa-volume-xmark text-red-400';
+                stopSirenSound();
+            } else {
+                icon.className = 'fa-solid fa-volume-high text-emerald-400';
+                if (activeAlarm && activeAlarm.status === 'TRIGGERED') startSirenSound();
+            }
+        }
+
+        // Emergency Control
+        function triggerEmergency(deviceId) {
+            const dev = devices.find(d => d.id === deviceId);
+            if (!dev) return;
+
+            dev.status = "TRIGGERED";
+            activeAlarm = {
+                id: "LOG-" + Math.floor(1000 + Math.random() * 9000),
+                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                deviceId: dev.id,
+                location: dev.location,
+                status: "TRIGGERED",
+                operator: currentUser ? currentUser.username : "System"
+            };
+
+            incidentLogs.unshift(activeAlarm);
+
+            document.getElementById('bannerLocation').innerText = `PANIC BUTTON DIPETIK DI ${dev.location.toUpperCase()}!`;
+            document.getElementById('bannerDeviceInfo').innerHTML = `Device ID: <span class="font-mono">${dev.id}</span>`;
+            document.getElementById('bannerTime').innerText = new Date().toLocaleTimeString('id-ID');
+            document.getElementById('mainAlarmBanner').classList.remove('hidden');
+
+            startSirenSound();
+            updateStatsAndGrids();
+            renderLogsTable();
+        }
+
+        function acknowledgeAlarm() {
+            if (!activeAlarm) return;
+            activeAlarm.status = "ACKNOWLEDGED";
+            activeAlarm.operator = currentUser ? currentUser.username : "Operator";
+
+            const dev = devices.find(d => d.id === activeAlarm.deviceId);
+            if (dev) dev.status = "ACKNOWLEDGED";
+
+            stopSirenSound();
+            document.getElementById('mainAlarmBanner').classList.remove('animate-pulse-fast');
+            updateStatsAndGrids();
+            renderLogsTable();
+        }
+
+        function resolveAlarm() {
+            if (activeAlarm) {
+                activeAlarm.status = "RESOLVED";
+                const dev = devices.find(d => d.id === activeAlarm.deviceId);
+                if (dev) dev.status = "SAFE";
+                activeAlarm = null;
+            }
+            devices.forEach(d => { if(d.status !== "OFFLINE") d.status = "SAFE"; });
+            stopSirenSound();
+            document.getElementById('mainAlarmBanner').classList.add('hidden');
+            updateStatsAndGrids();
+            renderLogsTable();
+        }
+
+        function simulateEmergencyTrigger() {
+            triggerEmergency("ESP32-DEV-001");
+        }
+
+        function updateStatsAndGrids() {
+            document.getElementById('statTotalDevices').innerText = devices.length;
+            document.getElementById('statActiveAlarms').innerText = `${devices.filter(d => d.status === 'TRIGGERED').length} Active`;
+            document.getElementById('statSafeDevices').innerText = devices.filter(d => d.status === 'SAFE').length;
+            document.getElementById('statOfflineDevices').innerText = devices.filter(d => d.status === 'OFFLINE').length;
+            renderZoneGrid();
+        }
+
+        function renderZoneGrid() {
+            const grid = document.getElementById('zoneGrid');
+            grid.innerHTML = devices.map(dev => {
+                let statusBg = "bg-emerald-950/40 border-emerald-500/40 text-emerald-400";
+                if (dev.status === 'TRIGGERED') statusBg = "bg-red-950/80 border-red-500 animate-pulse glow-red text-red-400";
+                if (dev.status === 'OFFLINE') statusBg = "bg-gray-800/40 border-gray-700/50 text-gray-400";
+
+                return `
+                    <div class="p-5 rounded-xl border ${statusBg} flex flex-col justify-between">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded border border-gray-700">${dev.id}</span>
+                                <h4 class="font-bold text-base text-gray-100 mt-2">${dev.location}</h4>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-700/40 flex items-center justify-between text-xs">
+                            <span class="text-gray-400 font-mono text-[11px]">${dev.ip}</span>
+                            ${dev.status === 'SAFE' ? 
+                                `<button onclick="triggerEmergency('${dev.id}')" class="px-2.5 py-1 bg-red-600/30 text-red-300 hover:bg-red-600 hover:text-white rounded text-[11px]">Test Panic</button>` : 
+                                `<span class="font-bold">${dev.status}</span>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderLogsTable() {
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = incidentLogs.map(log => `
+                <tr class="hover:bg-gray-800/50">
+                    <td class="p-3.5 font-mono text-gray-300">${log.timestamp}</td>
+                    <td class="p-3.5 font-mono text-gray-400">${log.deviceId}</td>
+                    <td class="p-3.5 font-semibold text-gray-200">${log.location}</td>
+                    <td class="p-3.5"><span class="px-2 py-0.5 rounded border font-bold text-[10px]">${log.status}</span></td>
+                    <td class="p-3.5 text-gray-400">${log.operator}</td>
+                    <td class="p-3.5 text-right">
+                        ${log.status === 'TRIGGERED' ? `
+                            <button onclick="acknowledgeAlarm()" class="px-2 py-1 bg-yellow-600/30 text-yellow-300 rounded text-[11px]">Ack</button>
+                            <button onclick="resolveAlarm()" class="px-2 py-1 bg-emerald-600/30 text-emerald-300 rounded text-[11px]">Resolve</button>
+                        ` : `-`}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderDeviceList() {
+            const container = document.getElementById('deviceListContainer');
+            container.innerHTML = devices.map(dev => `
+                <div class="bg-gray-900/80 p-3 rounded-xl border border-gray-700/60 flex items-center justify-between text-xs">
+                    <div>
+                        <div class="font-bold text-gray-200">${dev.location}</div>
+                        <div class="text-gray-400 font-mono text-[11px]">${dev.id}</div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-[10px] ${dev.status === 'OFFLINE' ? 'bg-gray-800 text-gray-400' : 'bg-emerald-950 text-emerald-400'}">${dev.status}</span>
+                </div>
+            `).join('');
+        }
+
+        function populateDeviceDropdown() {
+            const select = document.getElementById('genDeviceSelect');
+            select.innerHTML = devices.map(d => `<option value="${d.id}">${d.id} (${d.location})</option>`).join('');
+        }
+
+        function openAddDeviceModal() { document.getElementById('addDeviceModal').classList.remove('hidden'); }
+        function closeAddDeviceModal() { document.getElementById('addDeviceModal').classList.add('hidden'); }
+
+        function saveNewDevice() {
+            const id = document.getElementById('newDeviceId').value.trim();
+            const loc = document.getElementById('newDeviceLocation').value.trim();
+            if (!id || !loc) return;
+            devices.push({ id, location: loc, status: "SAFE", lastSeen: "Baru saja", ip: "192.168.1.150" });
+            closeAddDeviceModal();
+            initDashboardData();
+        }
+
+        function generateArduinoCode() {
+            const ssid = document.getElementById('genWifiSsid').value || "SSID";
+            const pass = document.getElementById('genWifiPass').value || "PASSWORD";
+            const selectedDevId = document.getElementById('genDeviceSelect').value || "ESP32-DEV-001";
+            const dev = devices.find(d => d.id === selectedDevId) || { id: selectedDevId, location: "Unknown" };
+
+            const code = `/* Firmware ESP32 Panic Button */
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+
+const char* WIFI_SSID = "${ssid}";
+const char* WIFI_PASS = "${pass}";
+const char* SERVER_URL = "${gasConfig.url || 'YOUR_GAS_URL'}";
+const char* API_KEY    = "${gasConfig.apiKey}";
+
+const int PANIC_BUTTON_PIN = 4;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PANIC_BUTTON_PIN, INPUT_PULLUP);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); }
+}
+
+void loop() {
+  if (digitalRead(PANIC_BUTTON_PIN) == LOW) {
+    sendEmergencySignal();
+    delay(2000);
+  }
+}
+
+void sendEmergencySignal() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(SERVER_URL);
+    http.addHeader("Content-Type", "application/json");
+
+    StaticJsonDocument<200> doc;
+    doc["action"]    = "triggerEmergency";
+    doc["api_key"]   = API_KEY;
+    doc["device_id"] = "${dev.id}";
+    doc["location"]  = "${dev.location}";
+    doc["status"]    = "TRIGGERED";
+
+    String payload;
+    serializeJson(doc, payload);
+    http.POST(payload);
+    http.end();
+  }
+}`;
+            document.getElementById('arduinoCodeDisplay').innerText = code;
+        }
+
+        function copyGeneratedCode() {
+            navigator.clipboard.writeText(document.getElementById('arduinoCodeDisplay').innerText).then(() => alert("Kode disalin!"));
+        }
+
+        function openSetupModal() { document.getElementById('setupModal').classList.remove('hidden'); }
+        function closeSetupModal() { document.getElementById('setupModal').classList.add('hidden'); }
+
+        function saveSetupConfig() {
+            gasConfig.url = document.getElementById('gasScriptUrl').value.trim();
+            gasConfig.apiKey = document.getElementById('gasApiKey').value.trim();
+            localStorage.setItem('gas_url', gasConfig.url);
+            localStorage.setItem('gas_key', gasConfig.apiKey);
+            closeSetupModal();
+            generateArduinoCode();
+        }
+    </script>
+</body>
+</html>
