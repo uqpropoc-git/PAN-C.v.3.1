@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IoT Emergency Response System & Panic Button</title>
 
+    <!-- PWA Meta Tags & Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ef4444">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/564/564619.png">
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -49,65 +56,56 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0b0f19;
+            background-color: #090d16;
             background-image: 
-                radial-gradient(at 10% 10%, rgba(220, 38, 38, 0.18) 0px, transparent 50%),
-                radial-gradient(at 90% 20%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-                radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
-                radial-gradient(at 80% 90%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+                radial-gradient(at 0% 0%, rgba(220, 38, 38, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
             background-attachment: fixed;
         }
 
-        /* Glassmorphism utility classes */
+        /* Glassmorphism Components */
         .glass-card {
             background: rgba(17, 24, 39, 0.55);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
-        .glass-card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .glass-card-hover:hover {
-            background: rgba(31, 41, 55, 0.65);
-            border-color: rgba(255, 255, 255, 0.22);
-            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
-            transform: translateY(-2px);
-        }
-
         .glass-header {
-            background: rgba(15, 23, 42, 0.7);
+            background: rgba(15, 23, 42, 0.65);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-modal {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .glass-input {
             background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            transition: all 0.2s ease;
         }
+
         .glass-input:focus {
-            background: rgba(15, 23, 42, 0.85);
             border-color: rgba(239, 68, 68, 0.6);
+            outline: none;
             box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
         }
 
-        .alarm-gradient-glass {
-            background: linear-gradient(135deg, rgba(220, 38, 38, 0.85) 0%, rgba(153, 27, 27, 0.85) 100%);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(254, 202, 202, 0.3);
+        .alarm-gradient {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.85) 0%, rgba(153, 27, 27, 0.9) 100%);
+            backdrop-filter: blur(16px);
         }
 
         .glow-red {
             box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
-        }
-
-        .glow-emerald {
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
         }
 
         ::-webkit-scrollbar {
@@ -115,113 +113,108 @@
             height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(15, 23, 42, 0.8);
         }
         ::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2);
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.4);
         }
     </style>
 </head>
 <body class="text-gray-100 min-h-screen flex flex-col selection:bg-red-500 selection:text-white relative overflow-x-hidden">
 
-    <!-- Ambient Glowing Orbs in Background -->
-    <div class="fixed top-20 left-10 w-72 h-72 bg-red-600/20 rounded-full blur-3xl pointer-events-none animate-float"></div>
-    <div class="fixed bottom-20 right-10 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none animate-float" style="animation-delay: -3s;"></div>
+    <!-- Glowing Background Ambient Orbs -->
+    <div class="fixed top-1/4 left-10 w-96 h-96 bg-red-600/10 rounded-full filter blur-3xl pointer-events-none animate-float"></div>
+    <div class="fixed bottom-10 right-10 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl pointer-events-none animate-float" style="animation-delay: -3s;"></div>
 
     <!-- HALAMAN LOGIN -->
-    <div id="loginPage" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xl flex items-center justify-center p-4">
-        <div class="glass-card w-full max-w-md rounded-3xl p-8 shadow-2xl space-y-6 relative overflow-hidden border border-white/20">
-            <div class="absolute -top-12 -right-12 w-32 h-32 bg-red-500/20 rounded-full blur-2xl"></div>
-            
-            <div class="text-center space-y-3 relative z-10">
-                <div class="w-20 h-20 bg-gradient-to-tr from-red-600 to-red-400 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg glow-red border border-white/20">
-                    <i class="fa-solid fa-triangle-exclamation text-4xl animate-pulse"></i>
+    <div id="loginPage" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="glass-modal w-full max-w-md rounded-3xl p-8 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl mx-auto flex items-center justify-center border border-red-500/30 shadow-lg shadow-red-500/20">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl animate-pulse"></i>
                 </div>
-                <h2 class="text-2xl font-extrabold text-white tracking-wider">AUTHENTICATION</h2>
-                <p class="text-xs text-gray-300 font-medium">IoT Emergency Response System</p>
+                <h2 class="text-2xl font-bold text-white tracking-wide">AUTHENTICATION</h2>
+                <p class="text-xs text-gray-400">IoT Emergency Response Dashboard System</p>
             </div>
 
-            <form onsubmit="handleAuthLogin(event)" class="space-y-4 relative z-10">
+            <form onsubmit="handleAuthLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1">Username</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                             <i class="fa-solid fa-user"></i>
                         </span>
-                        <input type="text" id="loginUsername" value="admin" required class="glass-input w-full rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none placeholder-gray-500" placeholder="Username">
+                        <input type="text" id="loginUsername" value="admin" required class="w-full glass-input rounded-xl pl-9 pr-3 py-2.5 text-sm text-white">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1">Password</label>
                     <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                             <i class="fa-solid fa-lock"></i>
                         </span>
-                        <input type="password" id="loginPassword" value="admin123" required class="glass-input w-full rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none placeholder-gray-500" placeholder="Password">
+                        <input type="password" id="loginPassword" value="admin123" required class="w-full glass-input rounded-xl pl-9 pr-3 py-2.5 text-sm text-white">
                     </div>
                 </div>
 
-                <div id="loginErrorMsg" class="hidden text-xs text-red-300 bg-red-950/60 backdrop-blur-md p-3 rounded-xl border border-red-500/40 text-center"></div>
+                <div id="loginErrorMsg" class="hidden text-xs text-red-400 bg-red-950/50 p-2.5 rounded-lg border border-red-800 text-center"></div>
 
-                <button type="submit" id="loginSubmitBtn" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center space-x-2 border border-white/20">
+                <button type="submit" id="loginSubmitBtn" class="w-full py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-600/30 transition-all flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-right-to-bracket"></i>
-                    <span>MASUK DASHBOARD</span>
+                    <span>MASUK SYSTEM</span>
                 </button>
             </form>
         </div>
     </div>
 
     <!-- MAIN APP CONTAINER -->
-    <div id="mainApp" class="hidden flex-1 flex flex-col relative z-10">
+    <div id="mainApp" class="hidden flex-1 flex flex-col z-10">
         <!-- TOP NAVIGATION HEADER -->
         <header class="glass-header sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-20">
+                <div class="flex items-center justify-between h-16">
                     <!-- Brand & Logo -->
-                    <div class="flex items-center space-x-3.5">
-                        <div class="p-2.5 bg-gradient-to-br from-red-600 to-red-700 text-white rounded-2xl shadow-lg border border-white/20 flex items-center justify-center glow-red">
-                            <i class="fa-solid fa-triangle-exclamation text-2xl animate-pulse"></i>
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-gradient-to-br from-red-500 to-red-700 text-white rounded-xl shadow-lg shadow-red-500/20 flex items-center justify-center">
+                            <i class="fa-solid fa-triangle-exclamation text-xl animate-pulse"></i>
                         </div>
                         <div>
-                            <h1 class="font-extrabold text-xl leading-tight tracking-wide text-white">EMERGENCY <span class="text-red-500">RESPONSE</span></h1>
-                            <p class="text-xs text-gray-300 font-medium">IoT Panic Button Dashboard</p>
+                            <h1 class="font-bold text-lg leading-tight tracking-wide text-white">EMERGENCY <span class="text-red-500">RESPONSE</span></h1>
+                            <p class="text-[10px] text-gray-400 font-medium">IoT Panic Button Dashboard</p>
                         </div>
                     </div>
 
-                    <!-- Visualisasi Jam Digital & Tanggal Sekarang -->
-                    <div class="hidden lg:flex items-center space-x-3 bg-white/5 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
-                        <i class="fa-regular fa-clock text-red-400 text-xl animate-pulse"></i>
+                    <!-- Jam Digital & Tanggal -->
+                    <div class="hidden lg:flex items-center space-x-3 glass-card px-4 py-1.5 rounded-xl">
+                        <i class="fa-regular fa-clock text-red-400 text-lg"></i>
                         <div class="text-left">
                             <div id="liveDigitalClock" class="font-mono text-sm font-bold text-emerald-400 leading-none">00:00:00 WITA</div>
-                            <div id="liveDateDisplay" class="text-[10px] text-gray-300 font-medium mt-1">Selasa, 6 Oktober 2026</div>
+                            <div id="liveDateDisplay" class="text-[10px] text-gray-400 font-medium mt-0.5">Selasa, 6 Oktober 2026</div>
                         </div>
                     </div>
 
                     <!-- Connection Status & System Controls -->
                     <div class="flex items-center space-x-3">
-                        <div id="connectionBadge" class="flex items-center space-x-2 px-3.5 py-2 rounded-2xl text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 backdrop-blur-md">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse glow-emerald"></span>
-                            <span id="connectionText" class="hidden sm:inline">SYSTEM ONLINE</span>
+                        <div id="connectionBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="connectionText">SYSTEM ONLINE</span>
                         </div>
 
-                        <!-- Mute Audio -->
-                        <button id="audioToggleBtn" onclick="toggleMuteAudio()" class="p-2.5 text-gray-300 hover:text-white bg-white/5 hover:bg-white/15 rounded-xl transition-all border border-white/10 backdrop-blur-md" title="Toggle Sound Alarm">
+                        <button id="audioToggleBtn" onclick="toggleMuteAudio()" class="p-2.5 text-gray-300 hover:text-white glass-card rounded-xl transition-all" title="Toggle Sound Alarm">
                             <i id="audioIcon" class="fa-solid fa-volume-high text-emerald-400"></i>
                         </button>
 
-                        <!-- Setup GAS -->
-                        <button onclick="openSetupModal()" class="flex items-center space-x-2 px-3.5 py-2 bg-blue-600/80 hover:bg-blue-500/90 border border-blue-400/30 text-white text-xs font-semibold rounded-xl shadow-lg backdrop-blur-md transition-all">
+                        <button onclick="openSetupModal()" class="flex items-center space-x-2 px-3 py-1.5 bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-semibold rounded-xl backdrop-blur-md transition-all border border-blue-400/30 shadow-lg shadow-blue-600/20">
                             <i class="fa-solid fa-sliders"></i>
                             <span class="hidden sm:inline">Setup GAS</span>
                         </button>
 
-                        <!-- LOGOUT BUTTON -->
-                        <button onclick="handleAuthLogout()" class="flex items-center space-x-1.5 px-3.5 py-2 bg-red-950/60 hover:bg-red-800/80 text-red-200 border border-red-500/30 text-xs font-semibold rounded-xl backdrop-blur-md transition-all">
+                        <button onclick="handleAuthLogout()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-700/50 text-xs font-semibold rounded-xl transition-all">
                             <i class="fa-solid fa-power-off"></i>
                             <span class="hidden sm:inline">Logout</span>
                         </button>
@@ -233,28 +226,28 @@
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
             <!-- ALARM BANNER -->
-            <div id="mainAlarmBanner" class="hidden relative overflow-hidden rounded-3xl alarm-gradient-glass p-6 text-white shadow-2xl glow-red border-2 border-red-400/50 animate-pulse-fast">
+            <div id="mainAlarmBanner" class="hidden relative overflow-hidden rounded-2xl alarm-gradient p-6 text-white shadow-2xl glow-red border border-red-400/50 animate-pulse-fast">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
                     <div class="flex items-center space-x-4">
-                        <div class="p-4 bg-white/20 backdrop-blur-lg rounded-2xl flex-shrink-0 animate-bounce border border-white/30">
+                        <div class="p-4 bg-white/20 rounded-full flex-shrink-0 animate-bounce backdrop-blur-md">
                             <i class="fa-solid fa-lightbulb text-4xl text-yellow-300"></i>
                         </div>
                         <div>
                             <div class="flex items-center space-x-2">
-                                <span class="bg-black/50 text-yellow-300 font-extrabold px-3 py-1 rounded-lg text-xs tracking-wider uppercase border border-yellow-500/30">PERINGATAN DARURAT</span>
+                                <span class="bg-black/40 text-yellow-300 font-bold px-2.5 py-0.5 rounded-full text-xs tracking-wider uppercase border border-yellow-300/30">PERINGATAN DARURAT</span>
                                 <span id="bannerTime" class="text-xs text-red-100 font-mono">10:26 WITA</span>
                             </div>
-                            <h2 id="bannerLocation" class="text-2xl sm:text-3xl font-black mt-1 tracking-tight">PANIC BUTTON DIPETIK!</h2>
-                            <p id="bannerDeviceInfo" class="text-sm text-red-100 mt-0.5">Device ID: <span class="font-mono bg-black/30 px-2 py-0.5 rounded">ESP32-DEV-001</span></p>
+                            <h2 id="bannerLocation" class="text-2xl sm:text-3xl font-extrabold mt-1">PANIC BUTTON DIPETIK!</h2>
+                            <p id="bannerDeviceInfo" class="text-sm text-red-100 mt-0.5">Device ID: <span class="font-mono">ESP32-DEV-001</span></p>
                         </div>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                        <button onclick="acknowledgeAlarm()" class="flex-1 md:flex-none px-5 py-3 bg-gradient-to-r from-yellow-500 to-amber-400 hover:from-yellow-400 hover:to-amber-300 text-gray-950 font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 border border-yellow-200/50">
+                        <button onclick="acknowledgeAlarm()" class="flex-1 md:flex-none px-5 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2">
                             <i class="fa-solid fa-hand"></i>
                             <span>ACKNOWLEDGE</span>
                         </button>
-                        <button onclick="resolveAlarm()" class="flex-1 md:flex-none px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 border border-emerald-300/40">
+                        <button onclick="resolveAlarm()" class="flex-1 md:flex-none px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2">
                             <i class="fa-solid fa-circle-check"></i>
                             <span>RESOLVE & RESET</span>
                         </button>
@@ -263,28 +256,28 @@
             </div>
 
             <!-- NAVIGATION TABS -->
-            <div class="flex items-center justify-between border-b border-white/10 pb-3 overflow-x-auto gap-2">
+            <div class="flex items-center justify-between border-b border-gray-800/80 pb-3 overflow-x-auto">
                 <div class="flex space-x-2">
-                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2.5 rounded-2xl font-bold text-sm transition-all flex items-center space-x-2 bg-white/10 text-red-400 border border-red-500/30 backdrop-blur-md shadow-lg">
+                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-4 py-2 rounded-xl font-semibold text-sm transition-all flex items-center space-x-2 glass-card text-red-400 border-red-500/30">
                         <i class="fa-solid fa-chart-pie"></i>
                         <span>Live Dashboard</span>
                     </button>
-                    <button onclick="switchTab('history')" id="tab-history" class="tab-btn px-4 py-2.5 rounded-2xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-300 hover:bg-white/5 hover:text-white border border-transparent">
+                    <button onclick="switchTab('history')" id="tab-history" class="tab-btn px-4 py-2 rounded-xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-400 hover:bg-gray-800/50 hover:text-gray-200">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                         <span>Riwayat Kejadian</span>
                     </button>
-                    <button onclick="switchTab('expired')" id="tab-expired" class="tab-btn px-4 py-2.5 rounded-2xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-300 hover:bg-white/5 hover:text-white border border-transparent">
+                    <button onclick="switchTab('expired')" id="tab-expired" class="tab-btn px-4 py-2 rounded-xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-400 hover:bg-gray-800/50 hover:text-gray-200">
                         <i class="fa-solid fa-folder-minus text-amber-400"></i>
                         <span>Log Kadaluarsa</span>
                     </button>
-                    <button onclick="switchTab('devices')" id="tab-devices" class="tab-btn px-4 py-2.5 rounded-2xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-300 hover:bg-white/5 hover:text-white border border-transparent">
+                    <button onclick="switchTab('devices')" id="tab-devices" class="tab-btn px-4 py-2 rounded-xl font-semibold text-sm transition-all flex items-center space-x-2 text-gray-400 hover:bg-gray-800/50 hover:text-gray-200">
                         <i class="fa-solid fa-microchip"></i>
                         <span>Perangkat & Foto Ruangan</span>
                     </button>
                 </div>
 
-                <button onclick="simulateEmergencyTrigger()" class="hidden sm:flex items-center space-x-2 px-4 py-2 bg-red-600/30 hover:bg-red-600/60 text-red-200 border border-red-500/40 rounded-2xl text-xs font-bold transition-all backdrop-blur-md shadow-md">
-                    <i class="fa-solid fa-bolt text-amber-300 animate-bounce"></i>
+                <button onclick="simulateEmergencyTrigger()" class="hidden sm:flex items-center space-x-2 px-3 py-2 bg-red-900/40 hover:bg-red-900/80 text-red-300 border border-red-700/50 rounded-xl text-xs font-semibold transition-all">
+                    <i class="fa-solid fa-bolt"></i>
                     <span>Simulasi Panic Button</span>
                 </button>
             </div>
@@ -292,53 +285,52 @@
             <!-- TAB 1: LIVE DASHBOARD -->
             <section id="content-dashboard" class="space-y-6">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+                    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Perangkat</p>
-                            <p id="statTotalDevices" class="text-3xl font-extrabold text-white mt-1">4</p>
+                            <p class="text-xs text-gray-400 font-medium">Total Perangkat</p>
+                            <p id="statTotalDevices" class="text-2xl font-bold text-gray-100 mt-1">4</p>
                         </div>
-                        <div class="p-3.5 bg-blue-500/20 text-blue-400 rounded-2xl border border-blue-500/30">
-                            <i class="fa-solid fa-network-wired text-2xl"></i>
+                        <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
+                            <i class="fa-solid fa-network-wired text-xl"></i>
                         </div>
                     </div>
-                    <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+                    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Status Darurat</p>
-                            <p id="statActiveAlarms" class="text-3xl font-extrabold text-emerald-400 mt-1">0 Active</p>
+                            <p class="text-xs text-gray-400 font-medium">Status Darurat</p>
+                            <p id="statActiveAlarms" class="text-2xl font-bold text-emerald-400 mt-1">0 Active</p>
                         </div>
-                        <div class="p-3.5 bg-red-500/20 text-red-400 rounded-2xl border border-red-500/30">
-                            <i class="fa-solid fa-bell text-2xl"></i>
+                        <div class="p-3 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20">
+                            <i class="fa-solid fa-bell text-xl"></i>
                         </div>
                     </div>
-                    <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+                    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Perangkat Safe</p>
-                            <p id="statSafeDevices" class="text-3xl font-extrabold text-emerald-400 mt-1">3</p>
+                            <p class="text-xs text-gray-400 font-medium">Perangkat Safe</p>
+                            <p id="statSafeDevices" class="text-2xl font-bold text-emerald-400 mt-1">3</p>
                         </div>
-                        <div class="p-3.5 bg-emerald-500/20 text-emerald-400 rounded-2xl border border-emerald-500/30">
-                            <i class="fa-solid fa-shield-halved text-2xl"></i>
+                        <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                            <i class="fa-solid fa-shield-halved text-xl"></i>
                         </div>
                     </div>
-                    <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+                    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Perangkat Offline</p>
-                            <p id="statOfflineDevices" class="text-3xl font-extrabold text-gray-400 mt-1">1</p>
+                            <p class="text-xs text-gray-400 font-medium">Perangkat Offline</p>
+                            <p id="statOfflineDevices" class="text-2xl font-bold text-gray-400 mt-1">1</p>
                         </div>
-                        <div class="p-3.5 bg-gray-500/20 text-gray-400 rounded-2xl border border-gray-500/30">
-                            <i class="fa-solid fa-plug-circle-xmark text-2xl"></i>
+                        <div class="p-3 bg-gray-500/10 text-gray-400 rounded-xl border border-gray-500/20">
+                            <i class="fa-solid fa-plug-circle-xmark text-xl"></i>
                         </div>
                     </div>
                 </div>
 
                 <div>
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <h3 class="text-base font-bold text-gray-200 flex items-center space-x-2">
                             <i class="fa-solid fa-grip text-red-500"></i>
-                            <span>Peta Visual Ruangan & Status ESP32</span>
+                            <span>Peta Ruangan & Zona Perangkat</span>
                         </h3>
-                        <span class="text-xs text-gray-400 bg-white/5 px-3 py-1 rounded-xl border border-white/10">Glassmorphism Interactive Map</span>
                     </div>
-                    <div id="zoneGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"></div>
+                    <div id="zoneGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
                 </div>
             </section>
 
@@ -347,38 +339,38 @@
                 <div class="glass-card p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
                         <div>
-                            <label class="block text-xs text-gray-400 mb-1 font-semibold">Filter Status</label>
-                            <select id="logStatusFilter" onchange="applyLogFilters()" class="glass-input text-xs rounded-xl px-3.5 py-2 text-white focus:outline-none">
-                                <option value="ALL" class="bg-gray-900">Semua Status</option>
-                                <option value="TRIGGERED" class="bg-gray-900">TRIGGERED</option>
-                                <option value="ACKNOWLEDGED" class="bg-gray-900">ACKNOWLEDGED</option>
-                                <option value="RESOLVED" class="bg-gray-900">RESOLVED</option>
+                            <label class="block text-xs text-gray-400 mb-1">Filter Status</label>
+                            <select id="logStatusFilter" onchange="applyLogFilters()" class="glass-input text-xs rounded-xl px-3 py-2 text-gray-200 focus:outline-none">
+                                <option value="ALL">Semua Status</option>
+                                <option value="TRIGGERED">TRIGGERED</option>
+                                <option value="ACKNOWLEDGED">ACKNOWLEDGED</option>
+                                <option value="RESOLVED">RESOLVED</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
-                        <button onclick="exportLogsToCSV()" class="px-4 py-2.5 bg-emerald-600/80 hover:bg-emerald-500 text-white border border-emerald-400/30 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-lg backdrop-blur-md transition-all">
-                            <i class="fa-solid fa-file-csv text-base"></i>
+                        <button onclick="exportLogsToCSV()" class="px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 backdrop-blur-md transition-all border border-emerald-400/30">
+                            <i class="fa-solid fa-file-csv"></i>
                             <span>Ekspor ke CSV</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="glass-card rounded-2xl overflow-hidden border border-gray-700/50">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs">
-                            <thead class="bg-white/10 text-gray-200 font-bold border-b border-white/10 backdrop-blur-md">
+                            <thead class="bg-slate-900/80 text-gray-300 font-semibold border-b border-gray-700/60">
                                 <tr>
-                                    <th class="p-4">Waktu Kejadian</th>
-                                    <th class="p-4">Device ID</th>
-                                    <th class="p-4">Lokasi Zona</th>
-                                    <th class="p-4">Status Peringatan</th>
-                                    <th class="p-4">Operator Handling</th>
-                                    <th class="p-4 text-right">Aksi Tindakan</th>
+                                    <th class="p-3.5">Waktu Kejadian</th>
+                                    <th class="p-3.5">Device ID</th>
+                                    <th class="p-3.5">Lokasi Zona</th>
+                                    <th class="p-3.5">Status Peringatan</th>
+                                    <th class="p-3.5">Operator Handling</th>
+                                    <th class="p-3.5 text-right">Aksi Tindakan</th>
                                 </tr>
                             </thead>
-                            <tbody id="logsTableBody" class="divide-y divide-white/5 text-gray-300"></tbody>
+                            <tbody id="logsTableBody" class="divide-y divide-gray-800/60 text-gray-300"></tbody>
                         </table>
                     </div>
                 </div>
@@ -386,40 +378,40 @@
 
             <!-- TAB 3: EXPIRED LOGS MENU -->
             <section id="content-expired" class="hidden space-y-4">
-                <div class="glass-card p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="glass-card p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
-                        <h3 class="font-bold text-base text-amber-400 flex items-center space-x-2">
+                        <h3 class="font-bold text-sm text-amber-400 flex items-center space-x-2">
                             <i class="fa-solid fa-clock-rotate-left"></i>
                             <span>Menu Log Kadaluarsa (&gt; 30 Hari)</span>
                         </h3>
-                        <p class="text-xs text-gray-300 mt-0.5">Arsip data insiden lama yang sudah melewati batas waktu retensi.</p>
+                        <p class="text-xs text-gray-400">Arsip data insiden lama yang sudah melewati batas waktu retensi.</p>
                     </div>
-                    <div class="flex items-center space-x-3">
-                        <span class="text-xs text-gray-300 font-medium">Batas Retensi:</span>
-                        <select id="expiredDaysSelect" onchange="fetchExpiredLogs()" class="glass-input text-xs rounded-xl px-3 py-2 text-white">
-                            <option value="30" class="bg-gray-900">30 Hari</option>
-                            <option value="60" class="bg-gray-900">60 Hari</option>
-                            <option value="90" class="bg-gray-900">90 Hari</option>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-gray-400">Batas Kadaluarsa:</span>
+                        <select id="expiredDaysSelect" onchange="fetchExpiredLogs()" class="glass-input text-xs rounded-xl px-3 py-1.5 text-white">
+                            <option value="30">30 Hari</option>
+                            <option value="60">60 Hari</option>
+                            <option value="90">90 Hari</option>
                         </select>
-                        <button onclick="fetchExpiredLogs()" class="px-4 py-2 bg-amber-600/80 hover:bg-amber-500 text-white border border-amber-400/30 rounded-xl text-xs font-bold transition-all">Refresh</button>
+                        <button onclick="fetchExpiredLogs()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold">Refresh</button>
                     </div>
                 </div>
 
-                <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="glass-card rounded-2xl overflow-hidden border border-gray-700/50">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs">
-                            <thead class="bg-white/10 text-gray-200 font-bold border-b border-white/10 backdrop-blur-md">
+                            <thead class="bg-slate-900/80 text-gray-300 font-semibold border-b border-gray-700/60">
                                 <tr>
-                                    <th class="p-4">ID Insiden</th>
-                                    <th class="p-4">Waktu Kejadian</th>
-                                    <th class="p-4">Device ID</th>
-                                    <th class="p-4">Lokasi</th>
-                                    <th class="p-4">Usia Log (Hari)</th>
-                                    <th class="p-4">Status Akhir</th>
+                                    <th class="p-3.5">ID Insiden</th>
+                                    <th class="p-3.5">Waktu Kejadian</th>
+                                    <th class="p-3.5">Device ID</th>
+                                    <th class="p-3.5">Lokasi</th>
+                                    <th class="p-3.5">Usia Log (Hari)</th>
+                                    <th class="p-3.5">Status Akhir</th>
                                 </tr>
                             </thead>
-                            <tbody id="expiredLogsTableBody" class="divide-y divide-white/5 text-gray-300">
-                                <tr><td colspan="6" class="p-4 text-center text-gray-400">Memuat log kadaluarsa...</td></tr>
+                            <tbody id="expiredLogsTableBody" class="divide-y divide-gray-800/60 text-gray-300">
+                                <tr><td colspan="6" class="p-4 text-center text-gray-500">Memuat log kadaluarsa...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -429,31 +421,29 @@
             <!-- TAB 4: DEVICE MANAGEMENT & CODE GENERATOR -->
             <section id="content-devices" class="hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Column 1: Daftar Perangkat & Photo Upload -->
                     <div class="lg:col-span-1 space-y-4">
                         <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
-                            <h3 class="font-bold text-sm text-white flex items-center space-x-2">
+                            <h3 class="font-bold text-sm text-gray-200 flex items-center space-x-2">
                                 <i class="fa-solid fa-microchip text-blue-400"></i>
                                 <span>Daftar Perangkat ESP32</span>
                             </h3>
-                            <button onclick="openAddDeviceModal()" class="px-3 py-1.5 bg-blue-600/80 hover:bg-blue-500 border border-blue-400/30 text-white text-xs rounded-xl font-bold transition-all shadow-md">
+                            <button onclick="openAddDeviceModal()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-xl font-semibold shadow-md">
                                 <i class="fa-solid fa-plus mr-1"></i>Tambah
                             </button>
                         </div>
-                        <div id="deviceListContainer" class="space-y-4"></div>
+                        <div id="deviceListContainer" class="space-y-3"></div>
                     </div>
 
-                    <!-- Column 2: Generator Code Arduino C++ -->
-                    <div class="lg:col-span-2 glass-card p-6 rounded-2xl space-y-4">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-4 gap-2">
+                    <div class="lg:col-span-2 glass-card p-5 rounded-2xl space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-700/60 pb-3 gap-2">
                             <div>
-                                <h3 class="font-bold text-base text-white flex items-center space-x-2">
+                                <h3 class="font-bold text-sm text-gray-100 flex items-center space-x-2">
                                     <i class="fa-solid fa-code text-yellow-400"></i>
                                     <span>Generator Code Arduino C++ (ESP32)</span>
                                 </h3>
-                                <p class="text-xs text-gray-300 mt-0.5">Otomatisasi skrip .ino untuk Panic Button hardware</p>
+                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino untuk Panic Button hardware</p>
                             </div>
-                            <button onclick="copyGeneratedCode()" class="px-4 py-2 bg-yellow-500/90 hover:bg-yellow-400 text-gray-950 rounded-xl text-xs font-extrabold transition-all border border-yellow-200/50 shadow-md">
+                            <button onclick="copyGeneratedCode()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-xs font-bold transition-all shadow-md">
                                 <i class="fa-solid fa-copy"></i>
                                 <span>Salin Kode .ino</span>
                             </button>
@@ -461,20 +451,20 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                                <label class="block text-xs text-gray-300 mb-1 font-semibold">Wi-Fi SSID</label>
-                                <input type="text" id="genWifiSsid" value="Wi-Fi_Kantor" oninput="generateArduinoCode()" class="glass-input w-full text-xs rounded-xl px-3 py-2 text-white">
+                                <label class="block text-xs text-gray-400 mb-1">Wi-Fi SSID</label>
+                                <input type="text" id="genWifiSsid" value="Wi-Fi_Kantor" oninput="generateArduinoCode()" class="w-full glass-input text-xs rounded-xl px-3 py-2 text-gray-200">
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-300 mb-1 font-semibold">Wi-Fi Password</label>
-                                <input type="password" id="genWifiPass" value="SecretPassword123" oninput="generateArduinoCode()" class="glass-input w-full text-xs rounded-xl px-3 py-2 text-white">
+                                <label class="block text-xs text-gray-400 mb-1">Wi-Fi Password</label>
+                                <input type="password" id="genWifiPass" value="SecretPassword123" oninput="generateArduinoCode()" class="w-full glass-input text-xs rounded-xl px-3 py-2 text-gray-200">
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-300 mb-1 font-semibold">Target Device</label>
-                                <select id="genDeviceSelect" onchange="generateArduinoCode()" class="glass-input w-full text-xs rounded-xl px-3 py-2 text-white"></select>
+                                <label class="block text-xs text-gray-400 mb-1">Target Device</label>
+                                <select id="genDeviceSelect" onchange="generateArduinoCode()" class="w-full glass-input text-xs rounded-xl px-3 py-2 text-gray-200"></select>
                             </div>
                         </div>
 
-                        <pre id="arduinoCodeDisplay" class="bg-black/60 p-4 rounded-xl text-xs text-emerald-400 font-mono overflow-x-auto max-h-[420px] border border-white/10 leading-relaxed shadow-inner"></pre>
+                        <pre id="arduinoCodeDisplay" class="bg-slate-950/80 p-4 rounded-xl text-xs text-emerald-400 font-mono overflow-x-auto max-h-[420px] border border-gray-800 leading-relaxed"></pre>
                     </div>
                 </div>
             </section>
@@ -482,96 +472,65 @@
     </div>
 
     <!-- MODAL SETUP GAS -->
-    <div id="setupModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl z-50 flex items-center justify-center p-4 hidden">
-        <div class="glass-card w-full max-w-xl rounded-3xl p-6 space-y-5 border border-white/20 shadow-2xl">
-            <h3 class="font-extrabold text-lg text-white border-b border-white/10 pb-3">Setup Integrasi Google Apps Script</h3>
-            <div class="space-y-4 text-xs">
+    <div id="setupModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-modal w-full max-w-xl rounded-3xl p-6 space-y-4">
+            <h3 class="font-bold text-lg text-white">Setup Integrasi Google Apps Script</h3>
+            <div class="space-y-3 text-xs">
                 <div>
-                    <label class="block text-gray-200 font-semibold mb-1">Web App Deployment URL</label>
-                    <input type="url" id="gasScriptUrl" placeholder="https://script.google.com/macros/s/AKfycbwmh4RqaOOQEHWzT-tF1o57MJAldlU7HvOGZ5TpxDDDIb_sgBuy6c4JBG8WeV-9KmuffA/exec" class="glass-input w-full rounded-xl p-3 text-white font-mono">
+                    <label class="block text-gray-300 font-semibold mb-1">Web App Deployment URL</label>
+                    <input type="url" id="gasScriptUrl" placeholder="https://script.google.com/macros/s/AKfycbwmh4RqaOOQEHWzT-tF1o57MJAldlU7HvOGZ5TpxDDDIb_sgBuy6c4JBG8WeV-9KmuffA/exec" class="w-full glass-input rounded-xl p-2.5 text-white font-mono">
                 </div>
                 <div>
-                    <label class="block text-gray-200 font-semibold mb-1">API Secret Key</label>
-                    <input type="password" id="gasApiKey" value="EMERGENCY_SECRET_KEY_2026" class="glass-input w-full rounded-xl p-3 text-white font-mono">
+                    <label class="block text-gray-300 font-semibold mb-1">API Secret Key</label>
+                    <input type="password" id="gasApiKey" value="EMERGENCY_SECRET_KEY_2026" class="w-full glass-input rounded-xl p-2.5 text-white font-mono">
                 </div>
             </div>
-            <div class="flex justify-end space-x-3 pt-3 border-t border-white/10">
-                <button onclick="closeSetupModal()" class="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-gray-200 rounded-xl text-xs font-semibold backdrop-blur-md transition-all">Tutup</button>
-                <button onclick="saveSetupConfig()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold border border-emerald-400/30 transition-all">Simpan</button>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeSetupModal()" class="px-4 py-2 bg-gray-700/60 hover:bg-gray-600 text-gray-200 rounded-xl text-xs font-semibold">Tutup</button>
+                <button onclick="saveSetupConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold">Simpan</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL ADD DEVICE & UPLOAD FOTO RUANGAN -->
-    <div id="addDeviceModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl z-50 flex items-center justify-center p-4 hidden">
-        <div class="glass-card w-full max-w-md rounded-3xl p-6 space-y-5 border border-white/20 shadow-2xl">
-            <h3 class="font-extrabold text-base text-white border-b border-white/10 pb-3">Tambah Perangkat IoT & Foto Ruangan</h3>
-            
-            <div class="space-y-4 text-xs">
+    <!-- MODAL TAMBAH PERANGKAT & UPLOAD FOTO RUANGAN -->
+    <div id="addDeviceModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-modal w-full max-w-md rounded-3xl p-6 space-y-4">
+            <h3 class="font-bold text-base text-gray-100">Tambah Perangkat IoT & Foto Ruangan</h3>
+            <div class="space-y-3 text-xs">
                 <div>
-                    <label class="block text-gray-300 font-semibold mb-1">Device ID</label>
-                    <input type="text" id="newDeviceId" placeholder="ESP32-DEV-005" class="glass-input w-full rounded-xl p-3 text-white">
+                    <label class="block text-gray-400 mb-1">Device ID</label>
+                    <input type="text" id="newDeviceId" placeholder="ESP32-DEV-005" class="w-full glass-input rounded-xl p-2.5 text-gray-100">
                 </div>
                 <div>
-                    <label class="block text-gray-300 font-semibold mb-1">Nama Lokasi / Ruangan</label>
-                    <input type="text" id="newDeviceLocation" placeholder="Ruang Rapat Utama" class="glass-input w-full rounded-xl p-3 text-white">
+                    <label class="block text-gray-400 mb-1">Nama Lokasi / Ruangan</label>
+                    <input type="text" id="newDeviceLocation" placeholder="Ruang Rapat Utama" class="w-full glass-input rounded-xl p-2.5 text-gray-100">
                 </div>
-                
                 <div>
-                    <label class="block text-gray-300 font-semibold mb-1">Upload Foto Ruangan</label>
-                    <div class="space-y-2">
-                        <input type="file" id="newDevicePhotoInput" accept="image/*" onchange="handleNewDevicePhotoPreview(event)" class="hidden">
-                        <button type="button" onclick="document.getElementById('newDevicePhotoInput').click()" class="w-full py-2.5 bg-white/10 hover:bg-white/20 text-gray-200 rounded-xl border border-dashed border-white/30 flex items-center justify-center space-x-2 transition-all">
-                            <i class="fa-solid fa-cloud-arrow-up text-blue-400"></i>
-                            <span id="uploadBtnLabel">Pilih Berkas Foto...</span>
-                        </button>
-                        <!-- Image Preview -->
-                        <div id="photoPreviewContainer" class="hidden relative rounded-xl overflow-hidden h-32 border border-white/20">
-                            <img id="newDevicePhotoPreview" src="" alt="Preview Ruangan" class="w-full h-full object-cover">
-                            <button onclick="removePhotoPreview()" class="absolute top-2 right-2 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5 text-xs transition-all">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
+                    <label class="block text-gray-400 mb-1">Unggah Foto Ruangan (Opsional)</label>
+                    <input type="file" id="newDeviceImageInput" accept="image/*" onchange="previewRoomImage(event)" class="w-full glass-input rounded-xl p-2 text-gray-300 text-xs file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-blue-600 file:text-white hover:file:bg-blue-500">
+                    <div id="roomImagePreviewContainer" class="mt-2 hidden">
+                        <img id="roomImagePreview" src="" alt="Preview Ruangan" class="w-full h-32 object-cover rounded-xl border border-gray-700">
                     </div>
                 </div>
-
-                <div>
-                    <label class="block text-gray-300 font-semibold mb-1">Atau Gunakan Preset Sampel Foto</label>
-                    <select id="presetPhotoSelect" onchange="applyPresetPhoto(this.value)" class="glass-input w-full rounded-xl p-2.5 text-white">
-                        <option value="" class="bg-gray-900">-- Pilih Preset Ruangan --</option>
-                        <option value="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80" class="bg-gray-900">Laboratorium Komputer</option>
-                        <option value="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80" class="bg-gray-900">Lobi Utama & Resepsionis</option>
-                        <option value="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80" class="bg-gray-900">Gudang Material</option>
-                        <option value="https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80" class="bg-gray-900">Ruang Rapat Direksi</option>
-                    </select>
-                </div>
             </div>
-
-            <div class="flex justify-end space-x-3 pt-3 border-t border-white/10">
-                <button onclick="closeAddDeviceModal()" class="px-4 py-2.5 bg-white/10 text-gray-200 rounded-xl text-xs font-semibold backdrop-blur-md transition-all">Batal</button>
-                <button onclick="saveNewDevice()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold border border-blue-400/30 transition-all">Simpan Device</button>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeAddDeviceModal()" class="px-4 py-2 bg-gray-700/60 text-gray-200 rounded-xl text-xs font-semibold">Batal</button>
+                <button onclick="saveNewDevice()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold shadow-md">Simpan Device</button>
             </div>
         </div>
     </div>
 
-    <!-- HIDDEN INPUT UNTUK UBAH FOTO ESP32 TERDAFTAR -->
-    <input type="file" id="changePhotoInput" accept="image/*" class="hidden" onchange="handleDevicePhotoChange(event)">
+    <!-- Hidden Input File untuk Update Foto Ruangan Per-Device -->
+    <input type="file" id="updateDeviceImageInput" accept="image/*" class="hidden" onchange="handleDeviceImageUpdate(event)">
 
     <!-- JAVASCRIPT APP LOGIC -->
     <script>
-        // Preset Sample Room Images
-        const sampleImages = {
-            lab: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=600&q=80",
-            lobi: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80",
-            gudang: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80",
-            kantin: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80"
-        };
-
+        // Sample Initial Data Perangkat dengan Image Preset
         let devices = [
-            { id: "ESP32-DEV-001", location: "Ruang Lab 01", status: "SAFE", lastSeen: "Baru saja", ip: "192.168.1.101", photo: sampleImages.lab },
-            { id: "ESP32-DEV-002", location: "Lobi Utama", status: "SAFE", lastSeen: "1 menit lalu", ip: "192.168.1.102", photo: sampleImages.lobi },
-            { id: "ESP32-DEV-003", location: "Gudang B2", status: "SAFE", lastSeen: "3 menit lalu", ip: "192.168.1.103", photo: sampleImages.gudang },
-            { id: "ESP32-DEV-004", location: "Kantin Lt 2", status: "OFFLINE", lastSeen: "2 jam lalu", ip: "192.168.1.104", photo: sampleImages.kantin }
+            { id: "ESP32-DEV-001", location: "Ruang Lab 01", status: "SAFE", lastSeen: "Baru saja", ip: "192.168.1.101", image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500&q=80" },
+            { id: "ESP32-DEV-002", location: "Lobi Utama", status: "SAFE", lastSeen: "1 menit lalu", ip: "192.168.1.102", image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=500&q=80" },
+            { id: "ESP32-DEV-003", location: "Gudang B2", status: "SAFE", lastSeen: "3 menit lalu", ip: "192.168.1.103", image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=500&q=80" },
+            { id: "ESP32-DEV-004", location: "Kantin Lt 2", status: "OFFLINE", lastSeen: "2 jam lalu", ip: "192.168.1.104", image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&q=80" }
         ];
 
         let incidentLogs = [
@@ -581,8 +540,8 @@
         let activeAlarm = null;
         let isMuted = false;
         let currentUser = null;
-        let tempPhotoDataUrl = null;
-        let selectedDeviceForPhotoChange = null;
+        let selectedDeviceIdForImageUpdate = null;
+        let currentNewDeviceImageData = null;
 
         let gasConfig = {
             url: localStorage.getItem('gas_url') || '',
@@ -600,7 +559,16 @@
             document.getElementById('gasApiKey').value = gasConfig.apiKey;
         };
 
-        // Visualisasi Jam Digital & Tanggal
+        // Register Service Worker untuk PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('Service Worker terdaftar:', reg.scope))
+                    .catch((err) => console.error('Gagal mendaftarkan Service Worker:', err));
+            });
+        }
+
+        // Jam Digital
         function startDigitalClock() {
             function updateClock() {
                 const now = new Date();
@@ -619,7 +587,7 @@
             setInterval(updateClock, 1000);
         }
 
-        // Authentication Handling
+        // Session Auth
         function checkAuthSession() {
             const savedUser = localStorage.getItem('auth_user');
             if (savedUser) {
@@ -667,15 +635,15 @@
         function switchTab(tabId) {
             document.querySelectorAll('section[id^="content-"]').forEach(sec => sec.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('bg-white/10', 'text-red-400', 'border-red-500/30', 'shadow-lg');
-                btn.classList.add('text-gray-300', 'border-transparent');
+                btn.classList.remove('glass-card', 'text-red-400', 'border-red-500/30');
+                btn.classList.add('text-gray-400');
             });
 
             document.getElementById(`content-${tabId}`).classList.remove('hidden');
             const activeBtn = document.getElementById(`tab-${tabId}`);
             if (activeBtn) {
-                activeBtn.classList.add('bg-white/10', 'text-red-400', 'border-red-500/30', 'shadow-lg');
-                activeBtn.classList.remove('text-gray-300', 'border-transparent');
+                activeBtn.classList.add('glass-card', 'text-red-400', 'border-red-500/30');
+                activeBtn.classList.remove('text-gray-400');
             }
 
             if (tabId === 'expired') {
@@ -687,7 +655,7 @@
         function fetchExpiredLogs() {
             const tbody = document.getElementById('expiredLogsTableBody');
             const days = document.getElementById('expiredDaysSelect').value;
-            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-300">Mencari log kadaluarsa...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">Mencari log kadaluarsa...</td></tr>`;
 
             if (!gasConfig.url) {
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-amber-400">Set URL Google Apps Script di menu Setup GAS terlebih dahulu.</td></tr>`;
@@ -699,17 +667,17 @@
                 .then(data => {
                     if (data.status === 'success' && data.expired_logs.length > 0) {
                         tbody.innerHTML = data.expired_logs.map(log => `
-                            <tr class="hover:bg-white/5 transition-all">
-                                <td class="p-4 font-mono text-gray-300">${log.incident_id}</td>
-                                <td class="p-4 font-mono text-gray-400">${log.timestamp}</td>
-                                <td class="p-4 font-mono text-gray-300">${log.device_id}</td>
-                                <td class="p-4 font-semibold text-white">${log.location}</td>
-                                <td class="p-4"><span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">${log.age_days} Hari</span></td>
-                                <td class="p-4 text-gray-300">${log.status}</td>
+                            <tr class="hover:bg-gray-800/40">
+                                <td class="p-3.5 font-mono text-gray-300">${log.incident_id}</td>
+                                <td class="p-3.5 font-mono text-gray-400">${log.timestamp}</td>
+                                <td class="p-3.5 font-mono text-gray-300">${log.device_id}</td>
+                                <td class="p-3.5 font-semibold text-gray-200">${log.location}</td>
+                                <td class="p-3.5"><span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">${log.age_days} Hari</span></td>
+                                <td class="p-3.5 text-gray-400">${log.status}</td>
                             </tr>
                         `).join('');
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-400">Tidak ada log kadaluarsa melebihi ${days} hari.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Tidak ada log kadaluarsa melebihi ${days} hari.</td></tr>`;
                     }
                 })
                 .catch(err => {
@@ -717,7 +685,7 @@
                 });
         }
 
-        // Web Audio Siren
+        // Siren Audio
         function initAudioContext() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
@@ -784,7 +752,7 @@
             incidentLogs.unshift(activeAlarm);
 
             document.getElementById('bannerLocation').innerText = `PANIC BUTTON DIPETIK DI ${dev.location.toUpperCase()}!`;
-            document.getElementById('bannerDeviceInfo').innerHTML = `Device ID: <span class="font-mono bg-black/40 px-2 py-0.5 rounded">${dev.id}</span>`;
+            document.getElementById('bannerDeviceInfo').innerHTML = `Device ID: <span class="font-mono">${dev.id}</span>`;
             document.getElementById('bannerTime').innerText = new Date().toLocaleTimeString('id-ID');
             document.getElementById('mainAlarmBanner').classList.remove('hidden');
 
@@ -833,43 +801,29 @@
             renderZoneGrid();
         }
 
+        // Render Cards Zona dengan Background Foto Ruangan
         function renderZoneGrid() {
             const grid = document.getElementById('zoneGrid');
             grid.innerHTML = devices.map(dev => {
-                let statusBg = "border-emerald-500/40 text-emerald-400";
-                let badgeClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
-                
-                if (dev.status === 'TRIGGERED') {
-                    statusBg = "border-red-500 animate-pulse glow-red text-red-400";
-                    badgeClass = "bg-red-600 text-white animate-bounce border-red-400";
-                }
-                if (dev.status === 'OFFLINE') {
-                    statusBg = "border-gray-600/40 text-gray-400";
-                    badgeClass = "bg-gray-700/60 text-gray-300 border-gray-600";
-                }
+                let statusBg = "bg-emerald-950/30 border-emerald-500/30 text-emerald-400";
+                if (dev.status === 'TRIGGERED') statusBg = "bg-red-950/80 border-red-500 animate-pulse glow-red text-red-400";
+                if (dev.status === 'OFFLINE') statusBg = "bg-gray-900/60 border-gray-700/50 text-gray-400";
 
-                const roomImg = dev.photo || "https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80";
+                const bgImageStyle = dev.image ? `style="background-image: linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), url('${dev.image}'); background-size: cover; background-position: center;"` : '';
 
                 return `
-                    <div class="glass-card relative rounded-2xl border ${statusBg} flex flex-col justify-between overflow-hidden group min-h-[200px]">
-                        <!-- Background Room Image with Glass Overlay -->
-                        <div class="absolute inset-0 z-0 opacity-40 group-hover:scale-105 transition-transform duration-500 bg-cover bg-center" style="background-image: url('${roomImg}');"></div>
-                        <div class="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/70 to-black/30 z-0"></div>
-
-                        <!-- Card Content -->
-                        <div class="relative z-10 p-5 flex items-start justify-between">
+                    <div ${bgImageStyle} class="glass-card p-5 rounded-2xl border ${statusBg} flex flex-col justify-between relative overflow-hidden transition-all duration-300 hover:scale-[1.02]">
+                        <div class="flex items-start justify-between relative z-10">
                             <div>
-                                <span class="text-[10px] font-mono px-2 py-0.5 rounded-lg border border-white/20 bg-black/40 backdrop-blur-md text-gray-300">${dev.id}</span>
-                                <h4 class="font-bold text-lg text-white mt-2 drop-shadow-md">${dev.location}</h4>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full glass-card border border-white/10 text-gray-300">${dev.id}</span>
+                                <h4 class="font-bold text-base text-gray-100 mt-2">${dev.location}</h4>
                             </div>
-                            <span class="px-2.5 py-1 rounded-xl font-extrabold text-[10px] border backdrop-blur-md ${badgeClass}">${dev.status}</span>
                         </div>
-
-                        <div class="relative z-10 p-5 pt-0 flex items-center justify-between text-xs">
-                            <span class="text-gray-300 font-mono text-[11px] bg-black/50 px-2 py-0.5 rounded-md border border-white/10">${dev.ip}</span>
+                        <div class="mt-8 pt-3 border-t border-white/10 flex items-center justify-between text-xs relative z-10">
+                            <span class="text-gray-400 font-mono text-[11px]">${dev.ip}</span>
                             ${dev.status === 'SAFE' ? 
-                                `<button onclick="triggerEmergency('${dev.id}')" class="px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white rounded-xl text-[11px] font-bold shadow-md border border-red-400/30 transition-all backdrop-blur-md">Test Panic</button>` : 
-                                `<span class="font-bold text-red-400 uppercase tracking-wider text-[11px]">${dev.status}</span>`
+                                `<button onclick="triggerEmergency('${dev.id}')" class="px-3 py-1 bg-red-600/40 text-red-300 hover:bg-red-600 hover:text-white rounded-lg text-[11px] backdrop-blur-md border border-red-500/30 transition-all">Test Panic</button>` : 
+                                `<span class="font-bold uppercase tracking-wider">${dev.status}</span>`
                             }
                         </div>
                     </div>
@@ -880,113 +834,90 @@
         function renderLogsTable() {
             const tbody = document.getElementById('logsTableBody');
             tbody.innerHTML = incidentLogs.map(log => `
-                <tr class="hover:bg-white/5 transition-all">
-                    <td class="p-4 font-mono text-gray-300">${log.timestamp}</td>
-                    <td class="p-4 font-mono text-gray-400">${log.deviceId}</td>
-                    <td class="p-4 font-semibold text-white">${log.location}</td>
-                    <td class="p-4"><span class="px-2.5 py-1 rounded-lg border font-bold text-[10px] bg-white/5 border-white/10">${log.status}</span></td>
-                    <td class="p-4 text-gray-300">${log.operator}</td>
-                    <td class="p-4 text-right">
+                <tr class="hover:bg-gray-800/40 transition-colors">
+                    <td class="p-3.5 font-mono text-gray-300">${log.timestamp}</td>
+                    <td class="p-3.5 font-mono text-gray-400">${log.deviceId}</td>
+                    <td class="p-3.5 font-semibold text-gray-200">${log.location}</td>
+                    <td class="p-3.5"><span class="px-2.5 py-1 rounded-full border border-white/10 text-[10px] font-bold ${log.status === 'TRIGGERED' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">${log.status}</span></td>
+                    <td class="p-3.5 text-gray-400">${log.operator}</td>
+                    <td class="p-3.5 text-right">
                         ${log.status === 'TRIGGERED' ? `
-                            <button onclick="acknowledgeAlarm()" class="px-3 py-1 bg-yellow-500/30 hover:bg-yellow-500 text-yellow-300 hover:text-black border border-yellow-400/40 rounded-lg text-[11px] font-bold transition-all">Ack</button>
-                            <button onclick="resolveAlarm()" class="px-3 py-1 bg-emerald-600/30 hover:bg-emerald-500 text-emerald-300 hover:text-white border border-emerald-400/40 rounded-lg text-[11px] font-bold transition-all">Resolve</button>
+                            <button onclick="acknowledgeAlarm()" class="px-2 py-1 bg-yellow-600/30 text-yellow-300 rounded-lg text-[11px]">Ack</button>
+                            <button onclick="resolveAlarm()" class="px-2 py-1 bg-emerald-600/30 text-emerald-300 rounded-lg text-[11px]">Resolve</button>
                         ` : `-`}
                     </td>
                 </tr>
             `).join('');
         }
 
+        // Render List Perangkat ESP32 & Fitur Upload Foto
         function renderDeviceList() {
             const container = document.getElementById('deviceListContainer');
-            container.innerHTML = devices.map(dev => {
-                const photoSrc = dev.photo || "https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=600&q=80";
-
-                return `
-                    <div class="glass-card p-4 rounded-2xl flex flex-col space-y-3 border border-white/10 glass-card-hover">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-16 h-16 rounded-xl overflow-hidden relative border border-white/20 flex-shrink-0 bg-gray-900">
-                                <img src="${photoSrc}" alt="${dev.location}" class="w-full h-full object-cover">
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-sm text-white truncate">${dev.location}</h4>
-                                <p class="text-xs font-mono text-gray-400">${dev.id}</p>
-                                <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${dev.status === 'OFFLINE' ? 'bg-gray-800 text-gray-400 border border-gray-700' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${dev.status}</span>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
-                            <span class="text-gray-400 font-mono">${dev.ip}</span>
-                            <button onclick="triggerUploadPhotoForDevice('${dev.id}')" class="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white border border-blue-400/30 rounded-xl text-[11px] font-semibold transition-all backdrop-blur-md flex items-center space-x-1">
+            container.innerHTML = devices.map(dev => `
+                <div class="glass-card p-3.5 rounded-2xl flex items-center justify-between text-xs space-x-3">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <div class="w-12 h-12 rounded-xl bg-gray-800 flex-shrink-0 overflow-hidden border border-gray-700 relative group">
+                            <img src="${dev.image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=200&q=80'}" class="w-full h-full object-cover">
+                            <button onclick="triggerUploadImage('${dev.id}')" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] transition-all">
                                 <i class="fa-solid fa-camera"></i>
-                                <span>Ganti Foto</span>
                             </button>
                         </div>
+                        <div class="truncate">
+                            <div class="font-bold text-gray-200 truncate">${dev.location}</div>
+                            <div class="text-gray-400 font-mono text-[11px]">${dev.id}</div>
+                            <button onclick="triggerUploadImage('${dev.id}')" class="text-blue-400 hover:underline text-[10px] mt-0.5 block">Ganti Foto Ruangan</button>
+                        </div>
                     </div>
-                `;
-            }).join('');
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold border ${dev.status === 'OFFLINE' ? 'bg-gray-800 text-gray-400 border-gray-700' : 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'}">${dev.status}</span>
+                </div>
+            `).join('');
         }
 
-        // Photo Upload Handling
-        function triggerUploadPhotoForDevice(deviceId) {
-            selectedDeviceForPhotoChange = deviceId;
-            document.getElementById('changePhotoInput').click();
+        // Trigger upload foto per device
+        function triggerUploadImage(deviceId) {
+            selectedDeviceIdForImageUpdate = deviceId;
+            document.getElementById('updateDeviceImageInput').click();
         }
 
-        function handleDevicePhotoChange(event) {
-            const file = event.target.files[0];
-            if (file && selectedDeviceForPhotoChange) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const dev = devices.find(d => d.id === selectedDeviceForPhotoChange);
-                    if (dev) {
-                        dev.photo = e.target.result;
-                        initDashboardData();
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+        function handleDeviceImageUpdate(e) {
+            const file = e.target.files[0];
+            if (!file || !selectedDeviceIdForImageUpdate) return;
 
-        function handleNewDevicePhotoPreview(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    tempPhotoDataUrl = e.target.result;
-                    document.getElementById('newDevicePhotoPreview').src = tempPhotoDataUrl;
-                    document.getElementById('photoPreviewContainer').classList.remove('hidden');
-                    document.getElementById('uploadBtnLabel').innerText = file.name;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function removePhotoPreview() {
-            tempPhotoDataUrl = null;
-            document.getElementById('newDevicePhotoInput').value = '';
-            document.getElementById('photoPreviewContainer').classList.add('hidden');
-            document.getElementById('uploadBtnLabel').innerText = 'Pilih Berkas Foto...';
-            document.getElementById('presetPhotoSelect').value = '';
-        }
-
-        function applyPresetPhoto(url) {
-            if (url) {
-                tempPhotoDataUrl = url;
-                document.getElementById('newDevicePhotoPreview').src = url;
-                document.getElementById('photoPreviewContainer').classList.remove('hidden');
-                document.getElementById('uploadBtnLabel').innerText = 'Preset Terpilih';
-            }
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const dev = devices.find(d => d.id === selectedDeviceIdForImageUpdate);
+                if (dev) {
+                    dev.image = event.target.result;
+                    initDashboardData();
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         function populateDeviceDropdown() {
             const select = document.getElementById('genDeviceSelect');
-            select.innerHTML = devices.map(d => `<option value="${d.id}" class="bg-gray-900">${d.id} (${d.location})</option>`).join('');
+            select.innerHTML = devices.map(d => `<option value="${d.id}">${d.id} (${d.location})</option>`).join('');
         }
 
-        function openAddDeviceModal() { document.getElementById('addDeviceModal').classList.remove('hidden'); }
-        function closeAddDeviceModal() { 
-            document.getElementById('addDeviceModal').classList.add('hidden');
-            removePhotoPreview();
+        function openAddDeviceModal() { 
+            currentNewDeviceImageData = null;
+            document.getElementById('roomImagePreviewContainer').classList.add('hidden');
+            document.getElementById('addDeviceModal').classList.remove('hidden'); 
+        }
+
+        function closeAddDeviceModal() { document.getElementById('addDeviceModal').classList.add('hidden'); }
+
+        function previewRoomImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                currentNewDeviceImageData = event.target.result;
+                document.getElementById('roomImagePreview').src = currentNewDeviceImageData;
+                document.getElementById('roomImagePreviewContainer').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
         }
 
         function saveNewDevice() {
@@ -994,12 +925,20 @@
             const loc = document.getElementById('newDeviceLocation').value.trim();
             if (!id || !loc) return;
 
-            const photo = tempPhotoDataUrl || sampleImages.lab;
-            devices.push({ id, location: loc, status: "SAFE", lastSeen: "Baru saja", ip: "192.168.1.150", photo: photo });
+            devices.push({ 
+                id, 
+                location: loc, 
+                status: "SAFE", 
+                lastSeen: "Baru saja", 
+                ip: "192.168.1.150",
+                image: currentNewDeviceImageData || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=500&q=80"
+            });
+
             closeAddDeviceModal();
             initDashboardData();
         }
 
+        // Arduino Code Generator
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "SSID";
             const pass = document.getElementById('genWifiPass').value || "PASSWORD";
@@ -1055,7 +994,7 @@ void sendEmergencySignal() {
         }
 
         function copyGeneratedCode() {
-            navigator.clipboard.writeText(document.getElementById('arduinoCodeDisplay').innerText).then(() => alert("Kode C++ ESP32 disalin ke clipboard!"));
+            navigator.clipboard.writeText(document.getElementById('arduinoCodeDisplay').innerText).then(() => alert("Kode disalin!"));
         }
 
         function openSetupModal() { document.getElementById('setupModal').classList.remove('hidden'); }
@@ -1068,22 +1007,6 @@ void sendEmergencySignal() {
             localStorage.setItem('gas_key', gasConfig.apiKey);
             closeSetupModal();
             generateArduinoCode();
-        }
-
-        function exportLogsToCSV() {
-            let csv = 'Timestamp,Device ID,Location,Status,Operator\n';
-            incidentLogs.forEach(log => {
-                csv += `"${log.timestamp}","${log.deviceId}","${log.location}","${log.status}","${log.operator}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('hidden', '');
-            a.setAttribute('href', url);
-            a.setAttribute('download', `incident_logs_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
         }
     </script>
 </body>
