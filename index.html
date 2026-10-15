@@ -64,7 +64,6 @@
             background-attachment: fixed;
         }
 
-        /* Glassmorphism Components */
         .glass-card {
             background: rgba(17, 24, 39, 0.55);
             backdrop-filter: blur(16px);
@@ -178,7 +177,6 @@
         <header class="glass-header sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
-                    <!-- Brand & Logo -->
                     <div class="flex items-center space-x-3">
                         <div class="p-2 bg-gradient-to-br from-red-500 to-red-700 text-white rounded-xl shadow-lg shadow-red-500/20 flex items-center justify-center">
                             <i class="fa-solid fa-triangle-exclamation text-xl animate-pulse"></i>
@@ -189,16 +187,14 @@
                         </div>
                     </div>
 
-                    <!-- Jam Digital & Tanggal -->
                     <div class="hidden lg:flex items-center space-x-3 glass-card px-4 py-1.5 rounded-xl">
                         <i class="fa-regular fa-clock text-red-400 text-lg"></i>
                         <div class="text-left">
                             <div id="liveDigitalClock" class="font-mono text-sm font-bold text-emerald-400 leading-none">00:00:00 WITA</div>
-                            <div id="liveDateDisplay" class="text-[10px] text-gray-400 font-medium mt-0.5">Selasa, 6 Oktober 2026</div>
+                            <div id="liveDateDisplay" class="text-[10px] text-gray-400 font-medium mt-0.5">Kamis, 15 Oktober 2026</div>
                         </div>
                     </div>
 
-                    <!-- Connection Status & System Controls -->
                     <div class="flex items-center space-x-3">
                         <div id="connectionBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -525,7 +521,6 @@
 
     <!-- JAVASCRIPT APP LOGIC -->
     <script>
-        // Sample Initial Data Perangkat dengan Image Preset
         let devices = [
             { id: "ESP32-DEV-001", location: "Ruang Lab 01", status: "SAFE", lastSeen: "Baru saja", ip: "192.168.1.101", image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500&q=80" },
             { id: "ESP32-DEV-002", location: "Lobi Utama", status: "SAFE", lastSeen: "1 menit lalu", ip: "192.168.1.102", image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=500&q=80" },
@@ -533,10 +528,7 @@
             { id: "ESP32-DEV-004", location: "Kantin Lt 2", status: "OFFLINE", lastSeen: "2 jam lalu", ip: "192.168.1.104", image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&q=80" }
         ];
 
-        let incidentLogs = [
-            { id: "LOG-1001", timestamp: "2026-10-05 08:30:12", deviceId: "ESP32-DEV-002", location: "Lobi Utama", status: "RESOLVED", operator: "Admin-01" }
-        ];
-
+        let incidentLogs = [];
         let activeAlarm = null;
         let isMuted = false;
         let currentUser = null;
@@ -548,7 +540,6 @@
             apiKey: localStorage.getItem('gas_key') || 'EMERGENCY_SECRET_KEY_2026'
         };
 
-        // Web Audio Context
         let audioCtx = null, sirenOscillator = null, sirenGain = null, sirenInterval = null;
 
         window.onload = function() {
@@ -559,21 +550,16 @@
             document.getElementById('gasApiKey').value = gasConfig.apiKey;
         };
 
-        // Register Service Worker untuk PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then((reg) => console.log('Service Worker terdaftar:', reg.scope))
-                    .catch((err) => console.error('Gagal mendaftarkan Service Worker:', err));
+                navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW error:', err));
             });
         }
 
-        // Jam Digital
         function startDigitalClock() {
             function updateClock() {
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('id-ID') + ' WITA';
-                
                 const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                 const dateStr = now.toLocaleDateString('id-ID', options);
 
@@ -587,7 +573,6 @@
             setInterval(updateClock, 1000);
         }
 
-        // Session Auth
         function checkAuthSession() {
             const savedUser = localStorage.getItem('auth_user');
             if (savedUser) {
@@ -595,6 +580,9 @@
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('mainApp').classList.remove('hidden');
                 initDashboardData();
+                
+                // Aktifkan Auto-Polling setiap 3 detik untuk sinkronisasi Real-Time dengan Spreadsheet
+                setInterval(pollDashboardData, 3000);
             } else {
                 document.getElementById('loginPage').classList.remove('hidden');
                 document.getElementById('mainApp').classList.add('hidden');
@@ -629,9 +617,66 @@
             renderDeviceList();
             populateDeviceDropdown();
             generateArduinoCode();
+            pollDashboardData(); // Initial fetch
         }
 
-        // Tab Switcher
+        // FUNGSI UTAMA AUTO-POLLING REAL-TIME DARI GOOGLE SPREADSHEET VIA GAS
+        function pollDashboardData() {
+            if (!gasConfig.url) return;
+
+            fetch(`${gasConfig.url}?action=getDashboardData`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.data) {
+                        const remoteIncidents = data.data.incidents;
+                        
+                        if (remoteIncidents && remoteIncidents.length > 0) {
+                            const latestIncident = remoteIncidents[0];
+                            
+                            // Jika ditemukan insiden baru berstatus TRIGGERED yang belum di-acknowledge/resolve
+                            if (latestIncident.status === 'TRIGGERED' && (!activeAlarm || activeAlarm.id !== latestIncident.incident_id)) {
+                                activeAlarm = {
+                                    id: latestIncident.incident_id,
+                                    timestamp: latestIncident.timestamp,
+                                    deviceId: latestIncident.device_id,
+                                    location: latestIncident.location,
+                                    status: latestIncident.status,
+                                    operator: latestIncident.responder_name || 'System'
+                                };
+
+                                // Sinkronkan status device di peta
+                                const dev = devices.find(d => d.id === latestIncident.device_id);
+                                if (dev) dev.status = "TRIGGERED";
+
+                                // Munculkan Banner Alarm & Bunyikan Sirine Laptop
+                                document.getElementById('bannerLocation').innerText = `PANIC BUTTON DIPETIK DI ${latestIncident.location.toUpperCase()}!`;
+                                document.getElementById('bannerDeviceInfo').innerHTML = `Device ID: <span class="font-mono">${latestIncident.device_id}</span>`;
+                                document.getElementById('bannerTime').innerText = latestIncident.timestamp;
+                                document.getElementById('mainAlarmBanner').classList.remove('hidden');
+
+                                startSirenSound();
+                                updateStatsAndGrids();
+                            } else if (latestIncident.status === 'RESOLVED' && activeAlarm && activeAlarm.id === latestIncident.incident_id) {
+                                // Jika sudah direlse oleh sistem/user lain
+                                resolveAlarm();
+                            }
+                            
+                            incidentLogs = remoteIncidents.map(inc => ({
+                                id: inc.incident_id,
+                                timestamp: inc.timestamp,
+                                deviceId: inc.device_id,
+                                location: inc.location,
+                                status: inc.status,
+                                operator: inc.responder_name || '-'
+                            }));
+
+                            renderLogsTable();
+                        }
+                    }
+                })
+                .catch(err => console.error("Gagal sinkronisasi data dari Spreadsheet:", err));
+        }
+
         function switchTab(tabId) {
             document.querySelectorAll('section[id^="content-"]').forEach(sec => sec.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -651,7 +696,6 @@
             }
         }
 
-        // Fetch Expired Logs
         function fetchExpiredLogs() {
             const tbody = document.getElementById('expiredLogsTableBody');
             const days = document.getElementById('expiredDaysSelect').value;
@@ -685,7 +729,6 @@
                 });
         }
 
-        // Siren Audio
         function initAudioContext() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
@@ -734,7 +777,6 @@
             }
         }
 
-        // Emergency Control
         function triggerEmergency(deviceId) {
             const dev = devices.find(d => d.id === deviceId);
             if (!dev) return;
@@ -790,7 +832,7 @@
         }
 
         function simulateEmergencyTrigger() {
-            triggerEmergency("ESP32-DEV-001");
+            triggerEmergency("ESP32-DEV-002");
         }
 
         function updateStatsAndGrids() {
@@ -801,7 +843,6 @@
             renderZoneGrid();
         }
 
-        // Render Cards Zona dengan Background Foto Ruangan
         function renderZoneGrid() {
             const grid = document.getElementById('zoneGrid');
             grid.innerHTML = devices.map(dev => {
@@ -833,6 +874,10 @@
 
         function renderLogsTable() {
             const tbody = document.getElementById('logsTableBody');
+            if (incidentLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Belum ada riwayat insiden.</td></tr>`;
+                return;
+            }
             tbody.innerHTML = incidentLogs.map(log => `
                 <tr class="hover:bg-gray-800/40 transition-colors">
                     <td class="p-3.5 font-mono text-gray-300">${log.timestamp}</td>
@@ -850,7 +895,6 @@
             `).join('');
         }
 
-        // Render List Perangkat ESP32 & Fitur Upload Foto
         function renderDeviceList() {
             const container = document.getElementById('deviceListContainer');
             container.innerHTML = devices.map(dev => `
@@ -873,7 +917,6 @@
             `).join('');
         }
 
-        // Trigger upload foto per device
         function triggerUploadImage(deviceId) {
             selectedDeviceIdForImageUpdate = deviceId;
             document.getElementById('updateDeviceImageInput').click();
@@ -938,7 +981,6 @@
             initDashboardData();
         }
 
-        // Arduino Code Generator
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "SSID";
             const pass = document.getElementById('genWifiPass').value || "PASSWORD";
