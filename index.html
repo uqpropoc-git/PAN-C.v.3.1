@@ -344,13 +344,6 @@
                             </select>
                         </div>
                     </div>
-
-                    <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
-                        <button onclick="exportLogsToCSV()" class="px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 backdrop-blur-md transition-all border border-emerald-400/30">
-                            <i class="fa-solid fa-file-csv"></i>
-                            <span>Ekspor ke CSV</span>
-                        </button>
-                    </div>
                 </div>
 
                 <div class="glass-card rounded-2xl overflow-hidden border border-gray-700/50">
@@ -550,12 +543,6 @@
             document.getElementById('gasApiKey').value = gasConfig.apiKey;
         };
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW error:', err));
-            });
-        }
-
         function startDigitalClock() {
             function updateClock() {
                 const now = new Date();
@@ -581,7 +568,7 @@
                 document.getElementById('mainApp').classList.remove('hidden');
                 initDashboardData();
                 
-                // Aktifkan Auto-Polling setiap 3 detik untuk sinkronisasi Real-Time dengan Spreadsheet
+                // Sinkronisasi otomatis dari spreadsheet setiap 3 detik
                 setInterval(pollDashboardData, 3000);
             } else {
                 document.getElementById('loginPage').classList.remove('hidden');
@@ -617,10 +604,10 @@
             renderDeviceList();
             populateDeviceDropdown();
             generateArduinoCode();
-            pollDashboardData(); // Initial fetch
+            pollDashboardData();
         }
 
-        // FUNGSI UTAMA AUTO-POLLING REAL-TIME DARI GOOGLE SPREADSHEET VIA GAS
+        // AUTO-POLLING REAL-TIME DARI GOOGLE SPREADSHEET
         function pollDashboardData() {
             if (!gasConfig.url) return;
 
@@ -633,7 +620,7 @@
                         if (remoteIncidents && remoteIncidents.length > 0) {
                             const latestIncident = remoteIncidents[0];
                             
-                            // Jika ditemukan insiden baru berstatus TRIGGERED yang belum di-acknowledge/resolve
+                            // Jika ada insiden baru berstatus TRIGGERED
                             if (latestIncident.status === 'TRIGGERED' && (!activeAlarm || activeAlarm.id !== latestIncident.incident_id)) {
                                 activeAlarm = {
                                     id: latestIncident.incident_id,
@@ -644,11 +631,9 @@
                                     operator: latestIncident.responder_name || 'System'
                                 };
 
-                                // Sinkronkan status device di peta
                                 const dev = devices.find(d => d.id === latestIncident.device_id);
                                 if (dev) dev.status = "TRIGGERED";
 
-                                // Munculkan Banner Alarm & Bunyikan Sirine Laptop
                                 document.getElementById('bannerLocation').innerText = `PANIC BUTTON DIPETIK DI ${latestIncident.location.toUpperCase()}!`;
                                 document.getElementById('bannerDeviceInfo').innerHTML = `Device ID: <span class="font-mono">${latestIncident.device_id}</span>`;
                                 document.getElementById('bannerTime').innerText = latestIncident.timestamp;
@@ -657,8 +642,8 @@
                                 startSirenSound();
                                 updateStatsAndGrids();
                             } else if (latestIncident.status === 'RESOLVED' && activeAlarm && activeAlarm.id === latestIncident.incident_id) {
-                                // Jika sudah direlse oleh sistem/user lain
-                                resolveAlarm();
+                                // Jika sudah diselesaikan dari tempat lain, tutup alarm lokal
+                                resolveAlarmLocalOnly();
                             }
                             
                             incidentLogs = remoteIncidents.map(inc => ({
@@ -781,54 +766,110 @@
             const dev = devices.find(d => d.id === deviceId);
             if (!dev) return;
 
-            dev.status = "TRIGGERED";
-            activeAlarm = {
-                id: "LOG-" + Math.floor(1000 + Math.random() * 9000),
-                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                deviceId: dev.id,
+            // Jika dipicu secara lokal, kirim juga ke server GAS agar tercatat di spreadsheet
+            const payload = {
+                action: "triggerEmergency",
+                api_key: gasConfig.apiKey,
+                device_id: dev.id,
                 location: dev.location,
-                status: "TRIGGERED",
-                operator: currentUser ? currentUser.username : "System"
+                status: "TRIGGERED"
             };
 
-            incidentLogs.unshift(activeAlarm);
-
-            document.getElementById('bannerLocation').innerText = `PANIC BUTTON DIPETIK DI ${dev.location.toUpperCase()}!`;
-            document.getElementById('bannerDeviceInfo').innerHTML = `Device ID: <span class="font-mono">${dev.id}</span>`;
-            document.getElementById('bannerTime').innerText = new Date().toLocaleTimeString('id-ID');
-            document.getElementById('mainAlarmBanner').classList.remove('hidden');
-
-            startSirenSound();
-            updateStatsAndGrids();
-            renderLogsTable();
+            if (gasConfig.url) {
+                fetch(gasConfig.url, {
+                    method: "POST",
+                    contentType: "application/json",
+                    body: JSON.stringify(payload)
+                }).then(() => pollDashboardData());
+            } else {
+                // Fallback lokal jika GAS belum diset
+                dev.status = "TRIGGERED";
+                activeAlarm = {
+                    id: "LOG-" + Math.floor(1000 + Math.random() * 9000),
+                    timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                    deviceId: dev.id,
+                    location: dev.location,
+                    status: "TRIGGERED",
+                    operator: currentUser ? currentUser.username : "System"
+                };
+                incidentLogs.unshift(activeAlarm);
+                startSirenSound();
+                updateStatsAndGrids();
+                renderLogsTable();
+            }
         }
 
+        // FUNGSI ACKNOWLEDGE YANG TERHUBUNG KE SERVER
         function acknowledgeAlarm() {
             if (!activeAlarm) return;
-            activeAlarm.status = "ACKNOWLEDGED";
-            activeAlarm.operator = currentUser ? currentUser.username : "Operator";
+            
+            updateIncidentStatusOnServer(activeAlarm.id, "ACKNOWLEDGED", () => {
+                activeAlarm.status = "ACKNOWLEDGED";
+                activeAlarm.operator = currentUser ? currentUser.username : "Operator";
 
-            const dev = devices.find(d => d.id === activeAlarm.deviceId);
-            if (dev) dev.status = "ACKNOWLEDGED";
+                const dev = devices.find(d => d.id === activeAlarm.deviceId);
+                if (dev) dev.status = "ACKNOWLEDGED";
 
-            stopSirenSound();
-            document.getElementById('mainAlarmBanner').classList.remove('animate-pulse-fast');
-            updateStatsAndGrids();
-            renderLogsTable();
+                stopSirenSound();
+                document.getElementById('mainAlarmBanner').classList.remove('animate-pulse-fast');
+                updateStatsAndGrids();
+                renderLogsTable();
+            });
         }
 
+        // FUNGSI RESOLVE & RESET YANG TERHUBUNG KE SERVER
         function resolveAlarm() {
-            if (activeAlarm) {
-                activeAlarm.status = "RESOLVED";
-                const dev = devices.find(d => d.id === activeAlarm.deviceId);
-                if (dev) dev.status = "SAFE";
-                activeAlarm = null;
-            }
+            if (!activeAlarm) return;
+            
+            const incidentIdToResolve = activeAlarm.id;
+
+            updateIncidentStatusOnServer(incidentIdToResolve, "RESOLVED", () => {
+                resolveAlarmLocalOnly();
+            });
+        }
+
+        function resolveAlarmLocalOnly() {
+            activeAlarm = null;
             devices.forEach(d => { if(d.status !== "OFFLINE") d.status = "SAFE"; });
             stopSirenSound();
             document.getElementById('mainAlarmBanner').classList.add('hidden');
             updateStatsAndGrids();
             renderLogsTable();
+        }
+
+        // KOMUNIKASI POST KE GOOGLE APPS SCRIPT
+        function updateIncidentStatusOnServer(incidentId, newStatus, callback) {
+            if (!gasConfig.url) {
+                callback();
+                return;
+            }
+
+            const payload = {
+                action: "updateIncident",
+                api_key: gasConfig.apiKey,
+                incident_id: incidentId,
+                status: newStatus,
+                responder_name: currentUser ? currentUser.username : "Admin"
+            };
+
+            fetch(gasConfig.url, {
+                method: "POST",
+                contentType: "application/json",
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    callback();
+                } else {
+                    console.error("Gagal memperbarui status di server:", data.message);
+                    alert("Gagal memperbarui status ke server: " + data.message);
+                }
+            })
+            .catch(err => {
+                console.error("Kesalahan jaringan saat update:", err);
+                callback();
+            });
         }
 
         function simulateEmergencyTrigger() {
