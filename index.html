@@ -1187,22 +1187,25 @@ void checkServerStatus() {
     HTTPClient http;
     String checkUrl = String(SERVER_URL) + "?action=checkDeviceStatus&device_id=" + String(DEVICE_ID);
     
-    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // Mengikuti redirect GAS
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
     http.begin(checkUrl);
     
     int httpCode = http.GET();
     if (httpCode > 0) {
       String response = http.getString();
       
-      // Validasi respons: Lewati jika kosong atau berupa HTML (halaman error/login Google)
+      // Cetak teks mentah dari server ke Serial Monitor untuk diperiksa
+      Serial.print("[Server Raw Response] Length: ");
+      Serial.println(response.length());
+      if (response.length() > 0) {
+        Serial.println(response);
+      }
+      
       if (response.length() == 0 || response.startsWith("<!DOCTYPE html>")) {
-        Serial.println("[Poll Server Warning] Server mengembalikan HTML/Kosong (Cek Deploy GAS / Izin 'Anyone').");
+        Serial.println("[Warning] Server mengembalikan HTML/Kosong. Pastikan Deploy GAS diatur ke 'Anyone'.");
         http.end();
         return;
       }
-      
-      Serial.print("[Poll Server] Response: ");
-      Serial.println(response);
       
       JsonDocument doc;
       DeserializationError error = deserializeJson(doc, response);
