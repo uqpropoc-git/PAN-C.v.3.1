@@ -1015,7 +1015,7 @@
             initDashboardData();
         }
 
-        // GENERATOR KODE ESP32 DENGAN FITUR AUTO-RESET OLED KETIKA RESOLVED
+        // GENERATOR KODE ESP32 DENGAN PERBAIKAN AUTO-RESET OLED BERDASARKAN DEVICE ID
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "Wi-Fi_Kantor";
             const pass = document.getElementById('genWifiPass').value || "SecretPassword123";
@@ -1148,9 +1148,9 @@ void displayEmergencyScreen() {
 
   // Pesan teks sesuai permintaan
   display.setCursor(0, 14);
-  display.println(F("Panic Button telah"));
-  display.println(F("ditekan, mohon tunggu"));
-  display.println(F("Tim Emergency Response"));
+  display.println(F("PANIC BUTTON DITEKAN"));
+  display.println(F("MOHON TUNGGU"));
+  display.println(F("TIM EMERGENCY RESPONSE"));
 
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setCursor(20, 55);
@@ -1187,20 +1187,24 @@ void checkServerStatus() {
     int httpCode = http.GET();
     if (httpCode > 0) {
       String response = http.getString();
-      DynamicJsonDocument doc(4096);
+      DynamicJsonDocument doc(8192); // Kapasitas buffer JSON diperbesar untuk menampung banyak log
       DeserializationError error = deserializeJson(doc, response);
       
       if (!error) {
         JsonArray incidents = doc["data"]["incidents"];
-        if (incidents.size() > 0) {
-          JsonObject latest = incidents[0];
-          const char* devId = latest["device_id"];
-          const char* status = latest["status"];
+        
+        // Loop seluruh daftar insiden untuk mencari baris milik device ini yang berstatus TRIGGERED/ACKNOWLEDGED
+        for (JsonObject incident : incidents) {
+          const char* devId = incident["device_id"];
+          const char* status = incident["status"];
 
-          // Jika insiden sudah RESOLVED di dashboard, kembalikan OLED ke Standby
-          if (String(devId) == "${dev.id}" && String(status) == "RESOLVED") {
-            isEmergencyActive = false;
-            displayStandbyScreen();
+          // Jika perangkat ini memiliki riwayat insiden, periksa apakah status terakhirnya sudah RESOLVED
+          if (String(devId) == "${dev.id}") {
+            if (String(status) == "RESOLVED") {
+              isEmergencyActive = false;
+              displayStandbyScreen();
+              break;
+            }
           }
         }
       }
