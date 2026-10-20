@@ -423,7 +423,7 @@
                                     <i class="fa-solid fa-code text-yellow-400"></i>
                                     <span>Generator Code Arduino C++ (ESP32 + OLED)</span>
                                 </h3>
-                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino lengkap dengan Serial Debugging</p>
+                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino lengkap dengan Serial Debugging & Safe JSON Parser</p>
                             </div>
                             <button onclick="copyGeneratedCode()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-xs font-bold transition-all shadow-md">
                                 <i class="fa-solid fa-copy"></i>
@@ -1000,7 +1000,7 @@
             initDashboardData();
         }
 
-        // GENERATOR KODE ESP32 DENGAN SERIAL DEBUGGING LENGKAP
+        // GENERATOR KODE ESP32 DENGAN SAFE JSON PARSER & REDIRECT HANDLING
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "Wi-Fi_Kantor";
             const pass = document.getElementById('genWifiPass').value || "SecretPassword123";
@@ -1008,7 +1008,7 @@
             const dev = devices.find(d => d.id === selectedDevId) || { id: selectedDevId, location: "Ruang Lab 01" };
 
             const code = `/* 
-  Firmware ESP32 Panic Button + OLED 0.96" (128x64) + Debugging Serial
+  Firmware ESP32 Panic Button + OLED 0.96" (128x64) + Safe JSON Parsing
   Target Device: ${dev.id} (${dev.location})
   Spreadsheet ID: ${gasConfig.spreadsheetId}
 */
@@ -1159,6 +1159,7 @@ void sendEmergencySignal() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     Serial.println("[HTTP] Mengirim sinyal darurat ke server...");
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // Otomatis ikuti redirect 302 dari Google
     http.begin(SERVER_URL);
     http.addHeader("Content-Type", "application/json");
 
@@ -1185,11 +1186,21 @@ void checkServerStatus() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     String checkUrl = String(SERVER_URL) + "?action=checkDeviceStatus&device_id=" + String(DEVICE_ID);
+    
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // Mengikuti redirect GAS
     http.begin(checkUrl);
     
     int httpCode = http.GET();
     if (httpCode > 0) {
       String response = http.getString();
+      
+      // Validasi respons: Lewati jika kosong atau berupa HTML (halaman error/login Google)
+      if (response.length() == 0 || response.startsWith("<!DOCTYPE html>")) {
+        Serial.println("[Poll Server Warning] Server mengembalikan HTML/Kosong (Cek Deploy GAS / Izin 'Anyone').");
+        http.end();
+        return;
+      }
+      
       Serial.print("[Poll Server] Response: ");
       Serial.println(response);
       
