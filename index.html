@@ -423,7 +423,7 @@
                                     <i class="fa-solid fa-code text-yellow-400"></i>
                                     <span>Generator Code Arduino C++ (ESP32 + OLED)</span>
                                 </h3>
-                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino untuk Panic Button & Display OLED 0.96"</p>
+                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino dengan Serial Debugging lengkap</p>
                             </div>
                             <button onclick="copyGeneratedCode()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-xs font-bold transition-all shadow-md">
                                 <i class="fa-solid fa-copy"></i>
@@ -627,7 +627,7 @@
                                 const dev = devices.find(d => d.id === latestIncident.device_id);
                                 if (dev) dev.status = "TRIGGERED";
 
-                                document.getElementById('bannerLocation').innerText = `PANIC BUTTON DIPETIK DI ${latestIncident.location.toUpperCase()}!`;
+                                document.getElementById('bannerLocation').innerText = `PANIC BUTTON DITEKAN DI ${latestIncident.location.toUpperCase()}!`;
                                 document.getElementById('bannerDeviceInfo').innerHTML = `Device ID: <span class="font-mono">${latestIncident.device_id}</span>`;
                                 document.getElementById('bannerTime').innerText = latestIncident.timestamp;
                                 document.getElementById('mainAlarmBanner').classList.remove('hidden');
@@ -880,8 +880,7 @@
                             </div>
                         </div>
                         <div class="mt-8 pt-3 border-t border-white/10 flex items-center justify-between text-xs relative z-10">
-                            <span class="text-gray-400 font-mono text-[11px]">${dev.ip}</span>
-                            ${dev.status === 'SAFE' ? 
+                            <span class="text-gray-400 font-mono text-[11px]">${dev.ip}</span>${dev.status === 'SAFE' ? 
                                 `<button onclick="triggerEmergency('${dev.id}')" class="px-3 py-1 bg-red-600/40 text-red-300 hover:bg-red-600 hover:text-white rounded-lg text-[11px] backdrop-blur-md border border-red-500/30 transition-all">Test Panic</button>` : 
                                 `<span class="font-bold uppercase tracking-wider">${dev.status}</span>`
                             }
@@ -1000,7 +999,7 @@
             initDashboardData();
         }
 
-        // GENERATOR KODE ESP32 MENGGUNAKAN ENDPOINT CHECK DEVICE STATUS YANG RINGAN & AKURAT
+        // GENERATOR KODE ESP32 DENGAN SERIAL DEBUGGING LENGKAP
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "Wi-Fi_Kantor";
             const pass = document.getElementById('genWifiPass').value || "SecretPassword123";
@@ -1008,10 +1007,9 @@
             const dev = devices.find(d => d.id === selectedDevId) || { id: selectedDevId, location: "Ruang Lab 01" };
 
             const code = `/* 
-  Firmware ESP32 Panic Button + OLED 0.96" (128x64)
+  Firmware ESP32 Panic Button + OLED 0.96" (128x64) + Debugging Serial
   Target Device: ${dev.id} (${dev.location})
   Spreadsheet ID: ${gasConfig.spreadsheetId}
-  Metode: Poling spesifik via ?action=checkDeviceStatus&device_id=${dev.id}
 */
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -1041,7 +1039,7 @@ unsigned long lastDebounceTime = 0;
 const unsigned long debounceDelay = 50;
 int lastButtonState = HIGH;
 unsigned long lastStatusCheck = 0;
-const unsigned long statusInterval = 3000; // Poling status server tiap 3 detik
+const unsigned long statusInterval = 3000; // Cek status server tiap 3 detik
 
 void displayStandbyScreen();
 void displayEmergencyScreen();
@@ -1050,6 +1048,9 @@ void checkServerStatus();
 
 void setup() {
   Serial.begin(115200);
+  delay(1000);
+  Serial.println("\\n\\n--- ESP32 PANIC BUTTON STARTING ---");
+
   pinMode(PANIC_BUTTON_PIN, INPUT_PULLUP);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
@@ -1067,10 +1068,18 @@ void setup() {
   display.println(F("Connecting WiFi..."));
   display.display();
 
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
+  
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
+    Serial.print(".");
   }
+  
+  Serial.println("\\nWiFi Connected!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
 
   displayStandbyScreen();
 }
@@ -1085,6 +1094,7 @@ void loop() {
   if ((millis() - lastDebounceTime) > debounceDelay) {
     if (reading == LOW && !isEmergencyActive) {
       isEmergencyActive = true;
+      Serial.println("\\n[EVENT] Panic Button Ditekan Secara Fisik!");
       
       digitalWrite(BUZZER_PIN, HIGH);
       delay(200);
@@ -1097,6 +1107,7 @@ void loop() {
 
   lastButtonState = reading;
 
+  // Poling status server berkala saat mode darurat aktif
   if (isEmergencyActive && (millis() - lastStatusCheck > statusInterval)) {
     lastStatusCheck = millis();
     checkServerStatus();
@@ -1104,7 +1115,7 @@ void loop() {
 }
 
 void displayStandbyScreen() {
-  display.clearDisplay(); // Bersihkan layar total agar tidak ada ghosting
+  display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
   display.setCursor(15, 2);
@@ -1120,92 +1131,37 @@ void displayStandbyScreen() {
   display.setCursor(18, 53);
   display.println(F("STATUS: STANDBY"));
   display.display();
+  Serial.println("[UI] Layar kembali ke STANDBY (Ready).");
 }
 
 void displayEmergencyScreen() {
-  display.clearDisplay(); // Bersihkan layar total agar teks tidak bertumpuk
+  display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
   display.setCursor(12, 0);
   display.println(F("!! DARURAT / PANIC !!"));
   display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
 
-  display.setCursor(0, 14);
+  display.setCursor(0, 16);
   display.println(F("PANIC BUTTON DITEKAN"));
-   display.println(F("MOHON TUNGGU TIM ERT"));
+  display.setCursor(0, 28);
+  display.println(F("MOHON TUNGGU TIM ERT"));
  
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setCursor(20, 54);
   display.println(F("SINYAL TERKIRIM"));
   display.display();
+  Serial.println("[UI] Layar menampilkan DARURAT (Panic).");
 }
 
 void sendEmergencySignal() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
+    Serial.println("[HTTP] Mengirim sinyal darurat ke server...");
     http.begin(SERVER_URL);
     http.addHeader("Content-Type", "application/json");
 
     JsonDocument doc;
     doc["action"]    = "triggerEmergency";
     doc["api_key"]   = API_KEY;
-    doc["device_id"] = DEVICE_ID;
-    doc["location"]  = "${dev.location}";
-    doc["status"]    = "TRIGGERED";
-
-    String payload;
-    serializeJson(doc, payload);
-    http.POST(payload);
-    http.end();
-  }
-}
-
-void checkServerStatus() {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    String checkUrl = String(SERVER_URL) + "?action=checkDeviceStatus&device_id=" + String(DEVICE_ID);
-    http.begin(checkUrl);
-    
-    int httpCode = http.GET();
-    if (httpCode > 0) {
-      String response = http.getString();
-      
-      JsonDocument doc;
-      DeserializationError error = deserializeJson(doc, response);
-      
-      if (!error) {
-        const char* currentStatus = doc["current_status"];
-        
-        if (currentStatus != nullptr) {
-          // Jika status di server sudah RESOLVED, kembalikan OLED ke Standby secara otomatis
-          if (String(currentStatus) == "RESOLVED") {
-            isEmergencyActive = false;
-            displayStandbyScreen();
-          }
-        }
-      }
-    }
-    http.end();
-  }
-}`;
-            document.getElementById('arduinoCodeDisplay').innerText = code;
-        }
-
-        function copyGeneratedCode() {
-            navigator.clipboard.writeText(document.getElementById('arduinoCodeDisplay').innerText).then(() => alert("Kode disalin!"));
-        }
-
-        function openSetupModal() { document.getElementById('setupModal').classList.remove('hidden'); }
-        function closeSetupModal() { document.getElementById('setupModal').classList.add('hidden'); }
-
-        function saveSetupConfig() {
-            gasConfig.url = document.getElementById('gasScriptUrl').value.trim();
-            gasConfig.apiKey = document.getElementById('gasApiKey').value.trim();
-            localStorage.setItem('gas_url', gasConfig.url);
-            localStorage.setItem('gas_key', gasConfig.apiKey);
-            closeSetupModal();
-            generateArduinoCode();
-        }
-    </script>
-</body>
-</html>
+    doc["device_id"] = DEVICE_ID
