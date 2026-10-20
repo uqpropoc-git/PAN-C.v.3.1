@@ -5,14 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IoT Emergency Response System & Panic Button</title>
 
-    <!-- PWA Meta Tags & Manifest -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ef4444">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/564/564619.png">
 
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -45,10 +43,7 @@
         }
     </script>
 
-    <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -125,7 +120,6 @@
 </head>
 <body class="text-gray-100 min-h-screen flex flex-col selection:bg-red-500 selection:text-white relative overflow-x-hidden">
 
-    <!-- Glowing Background Ambient Orbs -->
     <div class="fixed top-1/4 left-10 w-96 h-96 bg-red-600/10 rounded-full filter blur-3xl pointer-events-none animate-float"></div>
     <div class="fixed bottom-10 right-10 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl pointer-events-none animate-float" style="animation-delay: -3s;"></div>
 
@@ -173,7 +167,6 @@
 
     <!-- MAIN APP CONTAINER -->
     <div id="mainApp" class="hidden flex-1 flex flex-col z-10">
-        <!-- TOP NAVIGATION HEADER -->
         <header class="glass-header sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
@@ -513,7 +506,6 @@
         </div>
     </div>
 
-    <!-- Hidden Input File untuk Update Foto Ruangan Per-Device -->
     <input type="file" id="updateDeviceImageInput" accept="image/*" class="hidden" onchange="handleDeviceImageUpdate(event)">
 
     <!-- JAVASCRIPT APP LOGIC -->
@@ -572,8 +564,6 @@
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('mainApp').classList.remove('hidden');
                 initDashboardData();
-                
-                // Sinkronisasi otomatis dari spreadsheet setiap 3 detik
                 setInterval(pollDashboardData, 3000);
             } else {
                 document.getElementById('loginPage').classList.remove('hidden');
@@ -612,7 +602,6 @@
             pollDashboardData();
         }
 
-        // AUTO-POLLING REAL-TIME DARI GOOGLE SPREADSHEET
         function pollDashboardData() {
             if (!gasConfig.url) return;
 
@@ -625,7 +614,6 @@
                         if (remoteIncidents && remoteIncidents.length > 0) {
                             const latestIncident = remoteIncidents[0];
                             
-                            // Jika ada insiden baru berstatus TRIGGERED
                             if (latestIncident.status === 'TRIGGERED' && (!activeAlarm || activeAlarm.id !== latestIncident.incident_id)) {
                                 activeAlarm = {
                                     id: latestIncident.incident_id,
@@ -647,7 +635,6 @@
                                 startSirenSound();
                                 updateStatsAndGrids();
                             } else if (latestIncident.status === 'RESOLVED' && activeAlarm && activeAlarm.id === latestIncident.incident_id) {
-                                // Jika sudah diselesaikan dari tempat lain, tutup alarm lokal
                                 resolveAlarmLocalOnly();
                             }
                             
@@ -664,7 +651,7 @@
                         }
                     }
                 })
-                .catch(err => console.error("Gagal sinkronisasi data dari Spreadsheet:", err));
+                .catch(err => console.error("Gagal sinkronisasi data:", err));
         }
 
         function switchTab(tabId) {
@@ -681,9 +668,7 @@
                 activeBtn.classList.remove('text-gray-400');
             }
 
-            if (tabId === 'expired') {
-                fetchExpiredLogs();
-            }
+            if (tabId === 'expired') fetchExpiredLogs();
         }
 
         function fetchExpiredLogs() {
@@ -804,7 +789,6 @@
 
         function acknowledgeAlarm() {
             if (!activeAlarm) return;
-            
             updateIncidentStatusOnServer(activeAlarm.id, "ACKNOWLEDGED", () => {
                 activeAlarm.status = "ACKNOWLEDGED";
                 activeAlarm.operator = currentUser ? currentUser.username : "Operator";
@@ -822,7 +806,6 @@
         function resolveAlarm() {
             if (!activeAlarm) return;
             const incidentIdToResolve = activeAlarm.id;
-
             updateIncidentStatusOnServer(incidentIdToResolve, "RESOLVED", () => {
                 resolveAlarmLocalOnly();
             });
@@ -858,14 +841,11 @@
             })
             .then(res => res.json())
             .then(data => {
-                if (data.status === "success") {
-                    callback();
-                } else {
-                    alert("Gagal memperbarui status ke server: " + data.message);
-                }
+                if (data.status === "success") callback();
+                else alert("Gagal memperbarui status ke server: " + data.message);
             })
             .catch(err => {
-                console.error("Kesalahan jaringan saat update:", err);
+                console.error("Kesalahan jaringan:", err);
                 callback();
             });
         }
@@ -1020,7 +1000,7 @@
             initDashboardData();
         }
 
-        // GENERATOR KODE ESP32 (SINKRON DENGAN SPREADSHEET ID & LOGIKA CHECK STATUS AKURAT)
+        // GENERATOR KODE ESP32 MENGGUNAKAN ENDPOINT CHECK DEVICE STATUS YANG RINGAN & AKURAT
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "Wi-Fi_Kantor";
             const pass = document.getElementById('genWifiPass').value || "SecretPassword123";
@@ -1031,7 +1011,7 @@
   Firmware ESP32 Panic Button + OLED 0.96" (128x64)
   Target Device: ${dev.id} (${dev.location})
   Spreadsheet ID: ${gasConfig.spreadsheetId}
-  Pengecekan: Memeriksa log insiden terbaru milik device ini pada sheet LOGS
+  Metode: Poling spesifik via ?action=checkDeviceStatus&device_id=${dev.id}
 */
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -1047,10 +1027,11 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-const char* WIFI_SSID = "${ssid}";
-const char* WIFI_PASS = "${pass}";
+const char* WIFI_SSID  = "${ssid}";
+const char* WIFI_PASS  = "${pass}";
 const char* SERVER_URL = "${gasConfig.url || 'YOUR_GAS_URL'}";
 const char* API_KEY    = "${gasConfig.apiKey}";
+const char* DEVICE_ID  = "${dev.id}";
 
 const int PANIC_BUTTON_PIN = 4;
 const int BUZZER_PIN       = 2;
@@ -1073,7 +1054,6 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
-  // Inisialisasi OLED (SDA=21, SCL=22)
   Wire.begin(21, 22);
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("OLED Gagal Diinisialisasi!"));
@@ -1106,22 +1086,17 @@ void loop() {
     if (reading == LOW && !isEmergencyActive) {
       isEmergencyActive = true;
       
-      // Indikator Buzzer Singkat
       digitalWrite(BUZZER_PIN, HIGH);
       delay(200);
       digitalWrite(BUZZER_PIN, LOW);
 
-      // Tampilkan pesan darurat di layar OLED
       displayEmergencyScreen();
-
-      // Kirim sinyal ke server
       sendEmergencySignal();
     }
   }
 
   lastButtonState = reading;
 
-  // Cek status ke server secara berkala untuk reset otomatis OLED saat status RESOLVED
   if (isEmergencyActive && (millis() - lastStatusCheck > statusInterval)) {
     lastStatusCheck = millis();
     checkServerStatus();
@@ -1155,7 +1130,6 @@ void displayEmergencyScreen() {
   display.println(F("!! DARURAT / PANIC !!"));
   display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
 
-  // Pesan teks sesuai permintaan
   display.setCursor(0, 14);
   display.println(F("PANIC BUTTON DITEKAN"));
   display.println(F("MOHON TUNGGU"));
@@ -1173,11 +1147,10 @@ void sendEmergencySignal() {
     http.begin(SERVER_URL);
     http.addHeader("Content-Type", "application/json");
 
-    // Menggunakan JsonDocument (kompatibel ArduinoJson v6/v7)
     JsonDocument doc;
     doc["action"]    = "triggerEmergency";
     doc["api_key"]   = API_KEY;
-    doc["device_id"] = "${dev.id}";
+    doc["device_id"] = DEVICE_ID;
     doc["location"]  = "${dev.location}";
     doc["status"]    = "TRIGGERED";
 
@@ -1191,36 +1164,24 @@ void sendEmergencySignal() {
 void checkServerStatus() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
-    String checkUrl = String(SERVER_URL) + "?action=getDashboardData";
+    String checkUrl = String(SERVER_URL) + "?action=checkDeviceStatus&device_id=" + String(DEVICE_ID);
     http.begin(checkUrl);
     
     int httpCode = http.GET();
     if (httpCode > 0) {
       String response = http.getString();
       
-      // Menggunakan JsonDocument yang fleksibel & aman dari Stack Overflow
       JsonDocument doc;
       DeserializationError error = deserializeJson(doc, response);
       
       if (!error) {
-        JsonArray incidents = doc["data"]["incidents"];
+        const char* currentStatus = doc["current_status"];
         
-        // Memindai daftar insiden dari yang terbaru (paling atas)
-        for (JsonObject incident : incidents) {
-          const char* devId = incident["device_id"];  // Kolom C (device_id)
-          const char* status = incident["status"];    // Kolom F (status)
-
-          if (devId != nullptr && status != nullptr) {
-            // Jika menemukan log terbaru milik perangkat ini
-            if (String(devId) == "${dev.id}") {
-              // Apabila statusnya di server sudah RESOLVED, kembalikan OLED ke Standby
-              if (String(status) == "RESOLVED") {
-                isEmergencyActive = false;
-                displayStandbyScreen();
-              }
-              // Hentikan loop pencarian setelah menemukan log insiden terbaru milik device ini
-              break;
-            }
+        if (currentStatus != nullptr) {
+          // Jika status di server sudah RESOLVED, kembalikan OLED ke Standby secara otomatis
+          if (String(currentStatus) == "RESOLVED") {
+            isEmergencyActive = false;
+            displayStandbyScreen();
           }
         }
       }
