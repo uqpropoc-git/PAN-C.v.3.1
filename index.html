@@ -1104,7 +1104,7 @@ void loop() {
 }
 
 void displayStandbyScreen() {
-  display.clearDisplay();
+  display.clearDisplay(); // Bersihkan layar total agar tidak ada ghosting
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
   display.setCursor(15, 2);
@@ -1112,7 +1112,7 @@ void displayStandbyScreen() {
   display.drawLine(0, 12, 128, 12, SSD1306_WHITE);
 
   display.setCursor(0, 20);
-  display.print(F("ID  : ")); display.println("${dev.id}");
+  display.print(F("ID  : ")); display.println(DEVICE_ID);
   display.setCursor(0, 32);
   display.print(F("LOK : ")); display.println("${dev.location}");
   
@@ -1123,20 +1123,22 @@ void displayStandbyScreen() {
 }
 
 void displayEmergencyScreen() {
-  display.clearDisplay();
+  display.clearDisplay(); // Bersihkan layar total agar teks tidak bertumpuk
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
   display.setCursor(12, 0);
   display.println(F("!! DARURAT / PANIC !!"));
   display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
 
-  display.setCursor(0, 14);
+  display.setCursor(0, 16);
   display.println(F("PANIC BUTTON DITEKAN"));
+  display.setCursor(0, 28);
   display.println(F("MOHON TUNGGU"));
+  display.setCursor(0, 40);
   display.println(F("EMERGENCY TEAMS"));
 
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
-  display.setCursor(20, 55);
+  display.setCursor(20, 54);
   display.println(F("SINYAL TERKIRIM"));
   display.display();
 }
