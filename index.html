@@ -1015,12 +1015,12 @@
             initDashboardData();
         }
 
-        // GENERATOR KODE ESP32 DENGAN OLED DISPLAY 0.96"
+        // GENERATOR KODE ESP32 DENGAN FITUR AUTO-RESET OLED KETIKA RESOLVED
         function generateArduinoCode() {
-            const ssid = document.getElementById('genWifiSsid').value || "SSID";
-            const pass = document.getElementById('genWifiPass').value || "PASSWORD";
+            const ssid = document.getElementById('genWifiSsid').value || "Wi-Fi_Kantor";
+            const pass = document.getElementById('genWifiPass').value || "SecretPassword123";
             const selectedDevId = document.getElementById('genDeviceSelect').value || "ESP32-DEV-001";
-            const dev = devices.find(d => d.id === selectedDevId) || { id: selectedDevId, location: "Unknown" };
+            const dev = devices.find(d => d.id === selectedDevId) || { id: selectedDevId, location: "Ruang Lab 01" };
 
             const code = `/* 
   Firmware ESP32 Panic Button + OLED 0.96" (128x64)
@@ -1046,20 +1046,30 @@ const char* SERVER_URL = "${gasConfig.url || 'YOUR_GAS_URL'}";
 const char* API_KEY    = "${gasConfig.apiKey}";
 
 const int PANIC_BUTTON_PIN = 4;
+const int BUZZER_PIN       = 2;
+
 bool isEmergencyActive = false;
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 50;
+int lastButtonState = HIGH;
+unsigned long lastStatusCheck = 0;
+const unsigned long statusInterval = 3000; // Cek status server tiap 3 detik
 
 void displayStandbyScreen();
 void displayEmergencyScreen();
 void sendEmergencySignal();
+void checkServerStatus();
 
 void setup() {
   Serial.begin(115200);
   pinMode(PANIC_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
 
-  // Inisialisasi I2C dan OLED (SDA=21, SCL=22)
+  // Inisialisasi OLED (SDA=21, SCL=22)
   Wire.begin(21, 22);
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("OLED Alamat 0x3C Gagal!"));
+    Serial.println(F("OLED Gagal Diinisialisasi!"));
     for(;;);
   }
 
@@ -1079,14 +1089,35 @@ void setup() {
 }
 
 void loop() {
-  if (digitalRead(PANIC_BUTTON_PIN) == LOW && !isEmergencyActive) {
-    isEmergencyActive = true;
-    
-    // Tampilkan pesan darurat di OLED 0.96"
-    displayEmergencyScreen();
-    
-    // Kirim HTTP POST ke Google Apps Script / Dashboard
-    sendEmergencySignal();
+  int reading = digitalRead(PANIC_BUTTON_PIN);
+
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading == LOW && !isEmergencyActive) {
+      isEmergencyActive = true;
+      
+      // Indikator Buzzer
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(200);
+      digitalWrite(BUZZER_PIN, LOW);
+
+      // Tampilkan pesan darurat di layar OLED
+      displayEmergencyScreen();
+
+      // Kirim sinyal ke server
+      sendEmergencySignal();
+    }
+  }
+
+  lastButtonState = reading;
+
+  // Cek status ke server secara berkala untuk reset otomatis OLED saat status RESOLVED
+  if (isEmergencyActive && (millis() - lastStatusCheck > statusInterval)) {
+    lastStatusCheck = millis();
+    checkServerStatus();
   }
 }
 
@@ -1097,12 +1128,12 @@ void displayStandbyScreen() {
   display.println(F("SYSTEM READY [OK]"));
   display.drawLine(0, 12, 128, 12, SSD1306_WHITE);
 
-  display.setCursor(0, 22);
+  display.setCursor(0, 20);
   display.print(F("ID  : ")); display.println("${dev.id}");
-  display.setCursor(0, 36);
+  display.setCursor(0, 32);
   display.print(F("LOK : ")); display.println("${dev.location}");
   
-  display.drawLine(0, 50, 128, 50, SSD1306_WHITE);
+  display.drawLine(0, 48, 128, 48, SSD1306_WHITE);
   display.setCursor(18, 53);
   display.println(F("STATUS: STANDBY"));
   display.display();
@@ -1115,7 +1146,7 @@ void displayEmergencyScreen() {
   display.println(F("!! DARURAT / PANIC !!"));
   display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
 
-  // Pesan teks wajib sesuai permintaan
+  // Pesan teks sesuai permintaan
   display.setCursor(0, 14);
   display.println(F("Panic Button telah"));
   display.println(F("ditekan, mohon tunggu"));
@@ -1143,6 +1174,37 @@ void sendEmergencySignal() {
     String payload;
     serializeJson(doc, payload);
     http.POST(payload);
+    http.end();
+  }
+}
+
+void checkServerStatus() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String checkUrl = String(SERVER_URL) + "?action=getDashboardData";
+    http.begin(checkUrl);
+    
+    int httpCode = http.GET();
+    if (httpCode > 0) {
+      String response = http.getString();
+      DynamicJsonDocument doc(4096);
+      DeserializationError error = deserializeJson(doc, response);
+      
+      if (!error) {
+        JsonArray incidents = doc["data"]["incidents"];
+        if (incidents.size() > 0) {
+          JsonObject latest = incidents[0];
+          const char* devId = latest["device_id"];
+          const char* status = latest["status"];
+
+          // Jika insiden sudah RESOLVED di dashboard, kembalikan OLED ke Standby
+          if (String(devId) == "${dev.id}" && String(status) == "RESOLVED") {
+            isEmergencyActive = false;
+            displayStandbyScreen();
+          }
+        }
+      }
+    }
     http.end();
   }
 }`;
