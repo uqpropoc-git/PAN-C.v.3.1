@@ -1020,7 +1020,7 @@
             initDashboardData();
         }
 
-        // GENERATOR KODE ESP32 (SINKRON DENGAN SPREADSHEET ID & KOLOM LOGS)
+        // GENERATOR KODE ESP32 (SINKRON DENGAN SPREADSHEET ID & LOGIKA CHECK STATUS AKURAT)
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "Wi-Fi_Kantor";
             const pass = document.getElementById('genWifiPass').value || "SecretPassword123";
@@ -1031,7 +1031,7 @@
   Firmware ESP32 Panic Button + OLED 0.96" (128x64)
   Target Device: ${dev.id} (${dev.location})
   Spreadsheet ID: ${gasConfig.spreadsheetId}
-  Pengecekan: Kolom C (device_id) dan Kolom F (status RESOLVED) pada Sheet LOGS
+  Pengecekan: Memeriksa log insiden terbaru milik device ini pada sheet LOGS
 */
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -1106,7 +1106,7 @@ void loop() {
     if (reading == LOW && !isEmergencyActive) {
       isEmergencyActive = true;
       
-      // Indikator Buzzer
+      // Indikator Buzzer Singkat
       digitalWrite(BUZZER_PIN, HIGH);
       delay(200);
       digitalWrite(BUZZER_PIN, LOW);
@@ -1130,6 +1130,7 @@ void loop() {
 
 void displayStandbyScreen() {
   display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
   display.setCursor(15, 2);
   display.println(F("SYSTEM READY [OK]"));
@@ -1148,6 +1149,7 @@ void displayStandbyScreen() {
 
 void displayEmergencyScreen() {
   display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
   display.setTextSize(1);
   display.setCursor(12, 0);
   display.println(F("!! DARURAT / PANIC !!"));
@@ -1171,7 +1173,8 @@ void sendEmergencySignal() {
     http.begin(SERVER_URL);
     http.addHeader("Content-Type", "application/json");
 
-    StaticJsonDocument<250> doc;
+    // Menggunakan JsonDocument (kompatibel ArduinoJson v6/v7)
+    JsonDocument doc;
     doc["action"]    = "triggerEmergency";
     doc["api_key"]   = API_KEY;
     doc["device_id"] = "${dev.id}";
@@ -1194,22 +1197,28 @@ void checkServerStatus() {
     int httpCode = http.GET();
     if (httpCode > 0) {
       String response = http.getString();
-      DynamicJsonDocument doc(8192); // Alokasi buffer JSON memadai untuk riwayat log
+      
+      // Menggunakan JsonDocument yang fleksibel & aman dari Stack Overflow
+      JsonDocument doc;
       DeserializationError error = deserializeJson(doc, response);
       
       if (!error) {
         JsonArray incidents = doc["data"]["incidents"];
         
-        // Memindai data pada sheet LOGS (device_id di kolom C dan status di kolom F)
+        // Memindai daftar insiden dari yang terbaru (paling atas)
         for (JsonObject incident : incidents) {
-          const char* devId = incident["device_id"];  // Kolom C
-          const char* status = incident["status"];    // Kolom F
+          const char* devId = incident["device_id"];  // Kolom C (device_id)
+          const char* status = incident["status"];    // Kolom F (status)
 
           if (devId != nullptr && status != nullptr) {
-            // Jika device_id cocok dan status berubah menjadi RESOLVED, kembalikan OLED ke Standby
-            if (String(devId) == "${dev.id}" && String(status) == "RESOLVED") {
-              isEmergencyActive = false;
-              displayStandbyScreen();
+            // Jika menemukan log terbaru milik perangkat ini
+            if (String(devId) == "${dev.id}") {
+              // Apabila statusnya di server sudah RESOLVED, kembalikan OLED ke Standby
+              if (String(status) == "RESOLVED") {
+                isEmergencyActive = false;
+                displayStandbyScreen();
+              }
+              // Hentikan loop pencarian setelah menemukan log insiden terbaru milik device ini
               break;
             }
           }
