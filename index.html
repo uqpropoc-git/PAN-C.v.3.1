@@ -428,9 +428,9 @@
                             <div>
                                 <h3 class="font-bold text-sm text-gray-100 flex items-center space-x-2">
                                     <i class="fa-solid fa-code text-yellow-400"></i>
-                                    <span>Generator Code Arduino C++ (ESP32)</span>
+                                    <span>Generator Code Arduino C++ (ESP32 + OLED)</span>
                                 </h3>
-                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino untuk Panic Button hardware</p>
+                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino untuk Panic Button & Display OLED 0.96"</p>
                             </div>
                             <button onclick="copyGeneratedCode()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-xs font-bold transition-all shadow-md">
                                 <i class="fa-solid fa-copy"></i>
@@ -467,7 +467,7 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block text-gray-300 font-semibold mb-1">Web App Deployment URL</label>
-                    <input type="url" id="gasScriptUrl" placeholder="https://script.google.com/macros/s/AKfycbwmh4RqaOOQEHWzT-tF1o57MJAldlU7HvOGZ5TpxDDDIb_sgBuy6c4JBG8WeV-9KmuffA/exec" class="w-full glass-input rounded-xl p-2.5 text-white font-mono">
+                    <input type="url" id="gasScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full glass-input rounded-xl p-2.5 text-white font-mono">
                 </div>
                 <div>
                     <label class="block text-gray-300 font-semibold mb-1">API Secret Key</label>
@@ -766,7 +766,6 @@
             const dev = devices.find(d => d.id === deviceId);
             if (!dev) return;
 
-            // Jika dipicu secara lokal, kirim juga ke server GAS agar tercatat di spreadsheet
             const payload = {
                 action: "triggerEmergency",
                 api_key: gasConfig.apiKey,
@@ -782,7 +781,6 @@
                     body: JSON.stringify(payload)
                 }).then(() => pollDashboardData());
             } else {
-                // Fallback lokal jika GAS belum diset
                 dev.status = "TRIGGERED";
                 activeAlarm = {
                     id: "LOG-" + Math.floor(1000 + Math.random() * 9000),
@@ -799,7 +797,6 @@
             }
         }
 
-        // FUNGSI ACKNOWLEDGE YANG TERHUBUNG KE SERVER
         function acknowledgeAlarm() {
             if (!activeAlarm) return;
             
@@ -817,10 +814,8 @@
             });
         }
 
-        // FUNGSI RESOLVE & RESET YANG TERHUBUNG KE SERVER
         function resolveAlarm() {
             if (!activeAlarm) return;
-            
             const incidentIdToResolve = activeAlarm.id;
 
             updateIncidentStatusOnServer(incidentIdToResolve, "RESOLVED", () => {
@@ -837,7 +832,6 @@
             renderLogsTable();
         }
 
-        // KOMUNIKASI POST KE GOOGLE APPS SCRIPT
         function updateIncidentStatusOnServer(incidentId, newStatus, callback) {
             if (!gasConfig.url) {
                 callback();
@@ -862,7 +856,6 @@
                 if (data.status === "success") {
                     callback();
                 } else {
-                    console.error("Gagal memperbarui status di server:", data.message);
                     alert("Gagal memperbarui status ke server: " + data.message);
                 }
             })
@@ -1022,16 +1015,30 @@
             initDashboardData();
         }
 
+        // GENERATOR KODE ESP32 DENGAN OLED DISPLAY 0.96"
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "SSID";
             const pass = document.getElementById('genWifiPass').value || "PASSWORD";
             const selectedDevId = document.getElementById('genDeviceSelect').value || "ESP32-DEV-001";
             const dev = devices.find(d => d.id === selectedDevId) || { id: selectedDevId, location: "Unknown" };
 
-            const code = `/* Firmware ESP32 Panic Button */
+            const code = `/* 
+  Firmware ESP32 Panic Button + OLED 0.96" (128x64)
+  Target Device: ${dev.id} (${dev.location})
+*/
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+#define SCREEN_ADDRESS 0x3C
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 const char* WIFI_SSID = "${ssid}";
 const char* WIFI_PASS = "${pass}";
@@ -1039,19 +1046,85 @@ const char* SERVER_URL = "${gasConfig.url || 'YOUR_GAS_URL'}";
 const char* API_KEY    = "${gasConfig.apiKey}";
 
 const int PANIC_BUTTON_PIN = 4;
+bool isEmergencyActive = false;
+
+void displayStandbyScreen();
+void displayEmergencyScreen();
+void sendEmergencySignal();
 
 void setup() {
   Serial.begin(115200);
   pinMode(PANIC_BUTTON_PIN, INPUT_PULLUP);
+
+  // Inisialisasi I2C dan OLED (SDA=21, SCL=22)
+  Wire.begin(21, 22);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("OLED Alamat 0x3C Gagal!"));
+    for(;;);
+  }
+
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextSize(1);
+  display.setCursor(10, 25);
+  display.println(F("Connecting WiFi..."));
+  display.display();
+
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) { delay(500); }
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+
+  displayStandbyScreen();
 }
 
 void loop() {
-  if (digitalRead(PANIC_BUTTON_PIN) == LOW) {
+  if (digitalRead(PANIC_BUTTON_PIN) == LOW && !isEmergencyActive) {
+    isEmergencyActive = true;
+    
+    // Tampilkan pesan darurat di OLED 0.96"
+    displayEmergencyScreen();
+    
+    // Kirim HTTP POST ke Google Apps Script / Dashboard
     sendEmergencySignal();
-    delay(2000);
   }
+}
+
+void displayStandbyScreen() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(15, 2);
+  display.println(F("SYSTEM READY [OK]"));
+  display.drawLine(0, 12, 128, 12, SSD1306_WHITE);
+
+  display.setCursor(0, 22);
+  display.print(F("ID  : ")); display.println("${dev.id}");
+  display.setCursor(0, 36);
+  display.print(F("LOK : ")); display.println("${dev.location}");
+  
+  display.drawLine(0, 50, 128, 50, SSD1306_WHITE);
+  display.setCursor(18, 53);
+  display.println(F("STATUS: STANDBY"));
+  display.display();
+}
+
+void displayEmergencyScreen() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(12, 0);
+  display.println(F("!! DARURAT / PANIC !!"));
+  display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+
+  // Pesan teks wajib sesuai permintaan
+  display.setCursor(0, 14);
+  display.println(F("Panic Button telah"));
+  display.println(F("ditekan, mohon tunggu"));
+  display.println(F("Tim Emergency Response"));
+
+  display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
+  display.setCursor(20, 55);
+  display.println(F("SINYAL TERKIRIM"));
+  display.display();
 }
 
 void sendEmergencySignal() {
@@ -1060,7 +1133,7 @@ void sendEmergencySignal() {
     http.begin(SERVER_URL);
     http.addHeader("Content-Type", "application/json");
 
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<250> doc;
     doc["action"]    = "triggerEmergency";
     doc["api_key"]   = API_KEY;
     doc["device_id"] = "${dev.id}";
