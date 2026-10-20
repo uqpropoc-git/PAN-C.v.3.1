@@ -191,7 +191,7 @@
                         <i class="fa-regular fa-clock text-red-400 text-lg"></i>
                         <div class="text-left">
                             <div id="liveDigitalClock" class="font-mono text-sm font-bold text-emerald-400 leading-none">00:00:00 WITA</div>
-                            <div id="liveDateDisplay" class="text-[10px] text-gray-400 font-medium mt-0.5">Kamis, 15 Oktober 2026</div>
+                            <div id="liveDateDisplay" class="text-[10px] text-gray-400 font-medium mt-0.5">Selasa, 20 Oktober 2026</div>
                         </div>
                     </div>
 
@@ -473,6 +473,10 @@
                     <label class="block text-gray-300 font-semibold mb-1">API Secret Key</label>
                     <input type="password" id="gasApiKey" value="EMERGENCY_SECRET_KEY_2026" class="w-full glass-input rounded-xl p-2.5 text-white font-mono">
                 </div>
+                <div>
+                    <label class="block text-gray-300 font-semibold mb-1">Spreadsheet ID (LOGS)</label>
+                    <input type="text" id="gasSpreadsheetId" value="1NHXQsRPLE30LaJz1onF1n0YD4q__7uJZHzcWQcWOC6k" disabled class="w-full glass-input rounded-xl p-2.5 text-gray-400 font-mono">
+                </div>
             </div>
             <div class="flex justify-end space-x-2 pt-2">
                 <button onclick="closeSetupModal()" class="px-4 py-2 bg-gray-700/60 hover:bg-gray-600 text-gray-200 rounded-xl text-xs font-semibold">Tutup</button>
@@ -530,7 +534,8 @@
 
         let gasConfig = {
             url: localStorage.getItem('gas_url') || '',
-            apiKey: localStorage.getItem('gas_key') || 'EMERGENCY_SECRET_KEY_2026'
+            apiKey: localStorage.getItem('gas_key') || 'EMERGENCY_SECRET_KEY_2026',
+            spreadsheetId: '1NHXQsRPLE30LaJz1onF1n0YD4q__7uJZHzcWQcWOC6k'
         };
 
         let audioCtx = null, sirenOscillator = null, sirenGain = null, sirenInterval = null;
@@ -1015,17 +1020,18 @@
             initDashboardData();
         }
 
-        // GENERATOR KODE ESP32 (MENCARI DEVICE_ID PADA KOLOM C DAN STATUS RESOLVED PADA KOLOM F)
+        // GENERATOR KODE ESP32 (SINKRON DENGAN SPREADSHEET ID & KOLOM LOGS)
         function generateArduinoCode() {
             const ssid = document.getElementById('genWifiSsid').value || "Wi-Fi_Kantor";
-            const pass = document.getElementById('genWifiPass').value || "SecretPassword";
+            const pass = document.getElementById('genWifiPass').value || "SecretPassword123";
             const selectedDevId = document.getElementById('genDeviceSelect').value || "ESP32-DEV-001";
             const dev = devices.find(d => d.id === selectedDevId) || { id: selectedDevId, location: "Ruang Lab 01" };
 
             const code = `/* 
   Firmware ESP32 Panic Button + OLED 0.96" (128x64)
   Target Device: ${dev.id} (${dev.location})
-  Logik: Memeriksa device_id (Kolom C) dan status RESOLVED (Kolom F) pada Sheet LOGS
+  Spreadsheet ID: ${gasConfig.spreadsheetId}
+  Pengecekan: Kolom C (device_id) dan Kolom F (status RESOLVED) pada Sheet LOGS
 */
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -1150,8 +1156,8 @@ void displayEmergencyScreen() {
   // Pesan teks sesuai permintaan
   display.setCursor(0, 14);
   display.println(F("PANIC BUTTON DITEKAN"));
-  display.println(F("MOHON TUNGGU TIM"));
-  display.println(F("EMERGENCY RESPONSE"));
+  display.println(F("MOHON TUNGGU"));
+  display.println(F("EMERGENCY TEAMS"));
 
   display.drawLine(0, 52, 128, 52, SSD1306_WHITE);
   display.setCursor(20, 55);
@@ -1188,7 +1194,7 @@ void checkServerStatus() {
     int httpCode = http.GET();
     if (httpCode > 0) {
       String response = http.getString();
-      DynamicJsonDocument doc(8192); // Buffer JSON besar untuk menampung log spreadsheet
+      DynamicJsonDocument doc(8192); // Alokasi buffer JSON memadai untuk riwayat log
       DeserializationError error = deserializeJson(doc, response);
       
       if (!error) {
@@ -1196,14 +1202,16 @@ void checkServerStatus() {
         
         // Memindai data pada sheet LOGS (device_id di kolom C dan status di kolom F)
         for (JsonObject incident : incidents) {
-          const char* devId = incident["device_id"];  // Kolom C (device_id)
-          const char* status = incident["status"];    // Kolom F (status)
+          const char* devId = incident["device_id"];  // Kolom C
+          const char* status = incident["status"];    // Kolom F
 
-          // Jika device_id ini cocok dan statusnya sudah RESOLVED, reset OLED ke Standby
-          if (String(devId) == "${dev.id}" && String(status) == "RESOLVED") {
-            isEmergencyActive = false;
-            displayStandbyScreen();
-            break;
+          if (devId != nullptr && status != nullptr) {
+            // Jika device_id cocok dan status berubah menjadi RESOLVED, kembalikan OLED ke Standby
+            if (String(devId) == "${dev.id}" && String(status) == "RESOLVED") {
+              isEmergencyActive = false;
+              displayStandbyScreen();
+              break;
+            }
           }
         }
       }
