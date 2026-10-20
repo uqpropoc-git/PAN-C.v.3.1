@@ -423,7 +423,7 @@
                                     <i class="fa-solid fa-code text-yellow-400"></i>
                                     <span>Generator Code Arduino C++ (ESP32 + OLED)</span>
                                 </h3>
-                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino dengan Serial Debugging lengkap</p>
+                                <p class="text-xs text-gray-400">Otomatisasi skrip .ino lengkap dengan Serial Debugging</p>
                             </div>
                             <button onclick="copyGeneratedCode()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-gray-900 rounded-xl text-xs font-bold transition-all shadow-md">
                                 <i class="fa-solid fa-copy"></i>
@@ -627,7 +627,7 @@
                                 const dev = devices.find(d => d.id === latestIncident.device_id);
                                 if (dev) dev.status = "TRIGGERED";
 
-                                document.getElementById('bannerLocation').innerText = `PANIC BUTTON DITEKAN DI ${latestIncident.location.toUpperCase()}!`;
+                                document.getElementById('bannerLocation').innerText = `PANIC BUTTON DIPETIK DI ${latestIncident.location.toUpperCase()}!`;
                                 document.getElementById('bannerDeviceInfo').innerHTML = `Device ID: <span class="font-mono">${latestIncident.device_id}</span>`;
                                 document.getElementById('bannerTime').innerText = latestIncident.timestamp;
                                 document.getElementById('mainAlarmBanner').classList.remove('hidden');
@@ -880,7 +880,8 @@
                             </div>
                         </div>
                         <div class="mt-8 pt-3 border-t border-white/10 flex items-center justify-between text-xs relative z-10">
-                            <span class="text-gray-400 font-mono text-[11px]">${dev.ip}</span>${dev.status === 'SAFE' ? 
+                            <span class="text-gray-400 font-mono text-[11px]">${dev.ip}</span>
+                            ${dev.status === 'SAFE' ? 
                                 `<button onclick="triggerEmergency('${dev.id}')" class="px-3 py-1 bg-red-600/40 text-red-300 hover:bg-red-600 hover:text-white rounded-lg text-[11px] backdrop-blur-md border border-red-500/30 transition-all">Test Panic</button>` : 
                                 `<span class="font-bold uppercase tracking-wider">${dev.status}</span>`
                             }
@@ -1164,4 +1165,77 @@ void sendEmergencySignal() {
     JsonDocument doc;
     doc["action"]    = "triggerEmergency";
     doc["api_key"]   = API_KEY;
-    doc["device_id"] = DEVICE_ID
+    doc["device_id"] = DEVICE_ID;
+    doc["location"]  = "${dev.location}";
+    doc["status"]    = "TRIGGERED";
+
+    String payload;
+    serializeJson(doc, payload);
+    int httpResponseCode = http.POST(payload);
+    
+    Serial.print("[HTTP] Response Code POST: ");
+    Serial.println(httpResponseCode);
+    http.end();
+  } else {
+    Serial.println("[HTTP Error] WiFi terputus saat akan mengirim sinyal!");
+  }
+}
+
+void checkServerStatus() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String checkUrl = String(SERVER_URL) + "?action=checkDeviceStatus&device_id=" + String(DEVICE_ID);
+    http.begin(checkUrl);
+    
+    int httpCode = http.GET();
+    if (httpCode > 0) {
+      String response = http.getString();
+      Serial.print("[Poll Server] Response: ");
+      Serial.println(response);
+      
+      JsonDocument doc;
+      DeserializationError error = deserializeJson(doc, response);
+      
+      if (!error) {
+        const char* currentStatus = doc["current_status"];
+        if (currentStatus != nullptr) {
+          Serial.print("[Status Check] Status di Server: ");
+          Serial.println(currentStatus);
+          
+          if (String(currentStatus) == "RESOLVED") {
+            Serial.println("[ACTION] Status RESOLVED terdeteksi! Reset layar ke Standby.");
+            isEmergencyActive = false;
+            displayStandbyScreen();
+          }
+        }
+      } else {
+        Serial.println("[JSON Error] Gagal memparsing JSON dari server.");
+      }
+    } else {
+      Serial.print("[HTTP Error] GET gagal, error code: ");
+      Serial.println(httpCode);
+    }
+    http.end();
+  }
+}`;
+            document.getElementById('arduinoCodeDisplay').innerText = code;
+        }
+
+        function copyGeneratedCode() {
+            navigator.clipboard.writeText(document.getElementById('arduinoCodeDisplay').innerText).then(() => alert("Kode disalin!"));
+        }
+
+        function openSetupModal() { document.getElementById('setupModal').classList.remove('hidden'); }
+        function closeSetupModal() { document.getElementById('setupModal').classList.add('hidden'); }
+
+        function saveSetupConfig() {
+            gasConfig.url = document.getElementById('gasScriptUrl').value.trim();
+            gasConfig.apiKey = document.getElementById('gasApiKey').value.trim();
+            localStorage.setItem('gas_url', gasConfig.url);
+            localStorage.setItem('gas_key', gasConfig.apiKey);
+            closeSetupModal();
+            generateArduinoCode();
+        }
+    </script>
+</body>
+</html>
